@@ -1,4 +1,4 @@
 private
 ===
 
-Implementation of `gtp-plot` package.
+Implementation of `gtp-plot`
