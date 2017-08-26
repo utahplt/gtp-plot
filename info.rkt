@@ -1,0 +1,11 @@
+#lang info
+(define collection "gtp-plot")
+(define deps '("base" "scribble-abbrevs" "scribble-lib"))
+(define build-deps '("rackunit-lib" "racket-doc" "scribble-doc"))
+(define pkg-desc "For plotting gradual typing performance data")
+(define version "0.0")
+(define pkg-authors '(ben))
+(define scribblings '(("docs/gtp-plot.scrbl" () (omit-start))))
+(define raco-commands '(("gtp-plot" (submod gtp-plot/private/raco main) "Plot a dataset" #f)))
+(define compile-omit-paths '("example"))
+(define test-omit-paths '("example"))
