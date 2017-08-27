@@ -4,6 +4,8 @@
 
 (require racket/contract)
 (provide
+  performance-info
+
   (contract-out
    [make-performance-info
     (-> symbol?
@@ -12,6 +14,7 @@
         #:baseline-runtime nonnegative-real/c
         #:untyped-runtime nonnegative-real/c
         #:typed-runtime nonnegative-real/c
+        #:make-in-configurations (-> performance-info? sequence?)
         performance-info?)]
 
    [performance-info?
@@ -43,6 +46,9 @@
    [performance-info->typed-runtime
     (-> performance-info? nonnegative-real/c)]
 
+   [performance-info->make-in-configurations
+    (-> performance-info? any)]
+
    [performance-info-update-src
     (-> performance-info? path-string? performance-info?)]
 
@@ -50,7 +56,7 @@
     (-> performance-info? (sequence/c configuration-info?))]
 
    [count-configurations
-    (-> performance-info? (-> real? boolean?) natural?)]
+    (-> performance-info? (-> real? any) natural?)]
    ;; Count the number of configurations
    ;;  (encapsulted by the given `performance-info` struct)
    ;;  that satisfy the given predicate.
@@ -67,7 +73,7 @@
         any)]
 
    [filter-configurations
-    (-> performance-info? (-> real? boolean?) (listof configuration-info?))]
+    (-> performance-info? (-> real? any) (listof configuration-info?))]
    ;; Return the configurations whose mean running time satisfies the given predicate.
 
    [overhead
@@ -134,12 +140,12 @@
      (fprintf port "#<performance-info:~a>" (performance-info-name v)))])
 
 (define (make-performance-info name #:src k
-                                    #:num-units num-configs
+                                    #:num-units num-units
                                     #:baseline-runtime baseline
                                     #:untyped-runtime untyped
                                     #:typed-runtime typed
                                     #:make-in-configurations mic)
-  (performance-info name k num-configs baseline untyped typed mic))
+  (performance-info name k num-units baseline untyped typed mic))
 
 (define performance-info->name
   performance-info-name)
@@ -162,6 +168,9 @@
 
 (define performance-info->typed-runtime
   performance-info-typed-runtime)
+
+(define performance-info->make-in-configurations
+  performance-info-make-in-configurations)
 
 (define (performance-info-update-src pi new-src)
   (performance-info (performance-info->name pi)

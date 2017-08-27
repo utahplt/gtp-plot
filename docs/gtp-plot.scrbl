@@ -144,6 +144,77 @@ TBA
 @; -----------------------------------------------------------------------------
 @section[#:tag "built-in-data-formats"]{Data Formats}
 
+@defmodule[gtp-plot/typed-racket-info]
+
+@defproc[(typed-racket-data? [ps path-string?]) boolean?]{
+  A Typed Racket dataset:
+  @itemlist[
+  @item{
+    lives in a file named @filepath{NAME-vX-OTHER.rktd},
+     where @filepath{NAME} is the name of the program
+     and @filepath{vX} is a Racket version number,
+     and @filepath{OTHER} is any string (used to distinguish this data from other data with the same prefix).
+  }
+  @item{
+    contains a Racket vector with @racket[(expt 2 _N)] elements (for some natural @racket[_N]);
+     entries in the vector are lists of runtimes.
+  }
+  ]
+
+  Example data:
+  @verbatim{
+    ;; Example Typed Racket GTP dataset
+    #((1328)
+    (42)
+    (8) (1))
+  }
+}
+
+@defproc[(make-typed-racket-info [ps typed-racket-data?]) typed-racket-info?]{
+  Build a @tech{performance info} structure from a Typed Racket dataset.
+}
+
+@defproc[(typed-racket-info? [x any/c]) boolean?]{
+  Predicate for Typed Racket datasets.
+}
+
+
+@defmodule[gtp-plot/reticulated-info]
+
+@defproc[(reticulated-data? [ps path-string?]) boolean?]{
+  A Typed Racket dataset:
+  @itemlist[
+  @item{
+    lives in a file named @filepath{NAME-vX-OTHER.rktd},
+     where @filepath{NAME} is the name of the program
+     and @filepath{vX} is a Racket version number,
+     and @filepath{OTHER} is any string (used to distinguish this data from other data with the same prefix).
+  }
+  @item{
+    contains a Racket vector with @racket[(expt 2 _N)] elements (for some natural @racket[_N]);
+     entries in the vector are lists of runtimes.
+  }
+  ]
+
+  Example data:
+  @verbatim{
+    ;; Example Typed Racket GTP dataset
+    #((1328)
+    (42)
+    (8) (1))
+  }
+}
+
+@defproc[(make-typed-racket-info [ps typed-racket-data?]) typed-racket-info?]{
+  Build a @tech{performance info} structure from a Typed Racket dataset.
+}
+
+@defproc[(typed-racket-info? [x any/c]) boolean?]{
+  Predicate for Typed Racket datasets.
+}
+
+
+
 @; -----------------------------------------------------------------------------
 @section[#:tag "gtp-support]{Support}
 
