@@ -276,16 +276,6 @@
 
   (define-runtime-path karst-example "./test/karst-example_tab.gz")
 
-  (test-case "nonnegative-real/c"
-    (check-pred nonnegative-real/c 0)
-    (check-pred nonnegative-real/c 1)
-    (check-pred nonnegative-real/c 200)
-    (check-pred nonnegative-real/c 3.14)
-
-    (check-false nonnegative-real/c #f)
-    (check-false nonnegative-real/c -1)
-    (check-false nonnegative-real/c -0.00099))
-
   (test-case "benchmark->performance-info:example-data"
     (define karst-example-gunzip (gunzip/cd karst-example))
     (define-values [num-configs configs/module* base-retic typed-retic]

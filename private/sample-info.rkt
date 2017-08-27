@@ -20,7 +20,10 @@
     (-> sample-info? (listof performance-info?))]))
 
 (require
-  gtp-plot/private/performance-info)
+  gtp-plot/private/performance-info
+  gtp-plot/private/util
+  (only-in racket/math
+    natural?))
 
 ;; =============================================================================
 
@@ -38,6 +41,7 @@
                (performance-info->baseline-runtime pi)
                (performance-info->untyped-runtime pi)
                (performance-info->typed-runtime pi)
+               (performance-info->make-in-configurations pi)
                sample-size
                src*))
 
@@ -60,5 +64,5 @@
 
 (define (sample-info->performance-info* si)
   (for/list ([src (in-list (sample-info-sample-src* si))])
-    (performance-info-update-src pi src)))
+    (performance-info-update-src si src)))
 

@@ -8,6 +8,13 @@
 
   nonnegative-real/c
 
+  gtp-plot-logger
+  log-gtp-plot-debug
+  log-gtp-plot-info
+  log-gtp-plot-warning
+  log-gtp-plot-error
+  log-gtp-plot-fatal
+
   (contract-out
     [tab-split
      (-> string? (listof string?))]
@@ -89,6 +96,8 @@
     string-split))
 
 ;; =============================================================================
+
+(define-logger gtp-plot)
 
 (define nonnegative-real/c
   (flat-named-contract "nonnegative-real/c" (>=/c 0)))
@@ -203,6 +212,16 @@
 
 (module+ test
   (require rackunit rackunit-abbrevs)
+
+  (test-case "nonnegative-real/c"
+    (check-pred nonnegative-real/c 0)
+    (check-pred nonnegative-real/c 1)
+    (check-pred nonnegative-real/c 200)
+    (check-pred nonnegative-real/c 3.14)
+
+    (check-false (nonnegative-real/c #f))
+    (check-false (nonnegative-real/c -1))
+    (check-false (nonnegative-real/c -0.00099)))
 
   (test-case "path-string->string"
     (check-equal? (path-string->string "hi") "hi")
