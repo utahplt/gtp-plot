@@ -4,9 +4,9 @@
 
 (require racket/contract)
 (provide
-  configuration?
-
   confidence-interval
+
+  nonnegative-real/c
 
   (contract-out
     [tab-split
@@ -90,8 +90,8 @@
 
 ;; =============================================================================
 
-(define configuration?
-  (non-empty-listof exact-nonnegative-integer?))
+(define nonnegative-real/c
+  (flat-named-contract "nonnegative-real/c" (>=/c 0)))
 
 (define TAB "\t")
 
