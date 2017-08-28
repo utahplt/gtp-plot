@@ -20,8 +20,8 @@
     (-> sample-info? (listof performance-info?))]))
 
 (require
-  gtp-plot/private/performance-info
-  gtp-plot/private/util
+  gtp-plot/performance-info
+  gtp-plot/util
   (only-in racket/math
     natural?))
 

@@ -2,8 +2,12 @@
 
 (require racket/contract)
 (provide
-  reticulated-info?
+  reticulated-sample-directory?
   (contract-out
+   [reticulated-data?
+    (-> any/c any)]
+   [reticulated-info?
+    (-> any/c any)]
    [make-reticulated-info
     (-> reticulated-data? performance-info?)]
    [reticulated-info->sample-info
@@ -13,8 +17,8 @@
   gtp-plot/configuration-info
   gtp-plot/sample-info
   gtp-plot/system
-  gtp-plot/private/performance-info
-  gtp-plot/private/util
+  gtp-plot/performance-info
+  gtp-plot/util
   (only-in file/glob
     glob)
   (only-in file/gunzip

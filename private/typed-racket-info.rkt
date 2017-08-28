@@ -2,16 +2,18 @@
 
 (require racket/contract/base)
 (provide
-  typed-racket-data?
-  typed-racket-info?
   (contract-out
+   [typed-racket-data?
+    (-> any/c any)]
+   [typed-racket-info?
+    (-> any/c any)]
    [make-typed-racket-info
     (-> typed-racket-data? performance-info?)]))
 
 (require
-  gtp-plot/private/configuration-info
-  gtp-plot/private/performance-info
-  gtp-plot/private/util
+  gtp-plot/configuration-info
+  gtp-plot/performance-info
+  gtp-plot/util
   (only-in math/statistics
     mean)
   (only-in racket/file

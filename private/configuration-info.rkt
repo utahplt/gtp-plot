@@ -14,7 +14,7 @@
     (-> configuration-info? nonnegative-real/c)]))
 
 (require
-  gtp-plot/private/util
+  gtp-plot/util
   (only-in racket/math natural?)
   (only-in math/statistics mean))
 

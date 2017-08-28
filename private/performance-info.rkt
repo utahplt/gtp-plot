@@ -117,8 +117,8 @@
 ))
 
 (require
-  gtp-plot/private/configuration-info
-  gtp-plot/private/util
+  gtp-plot/configuration-info
+  gtp-plot/util
   (only-in racket/sequence
     sequence/c)
   (only-in racket/math

@@ -104,7 +104,7 @@
 (define-logger gtp-plot)
 
 (define nonnegative-real/c
-  (flat-named-contract "nonnegative-real/c" (>=/c 0)))
+  (flat-named-contract 'nonnegative-real/c (>=/c 0)))
 
 (define TAB "\t")
 
