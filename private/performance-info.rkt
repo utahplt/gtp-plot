@@ -272,60 +272,23 @@
 
 ;; =============================================================================
 
-#;(module+ test
-  (require rackunit racket/runtime-path rackunit-abbrevs)
-
-  (define-runtime-path karst-example "./test/karst-example_tab.gz")
+(module+ test
+  (require rackunit racket/list)
 
   (test-case "benchmark->performance-info:example-data"
-    (define karst-example-gunzip (gunzip/cd karst-example))
-    (define-values [num-configs configs/module* base-retic typed-retic]
-      (scan-karst-file karst-example-gunzip))
-    (check-equal? num-configs 4)
-    (check-equal? configs/module* '(2 2))
-    (check-equal? base-retic 10)
-    (check-equal? typed-retic 20)
-
-    (let ([pi (make-performance-info 'example
-                #:src karst-example-gunzip
-                #:num-configurations num-configs
-                #:python-runtime base-retic
-                #:untyped-retic-runtime base-retic
-                #:typed-retic-runtime typed-retic)])
-      (check-equal? (num-configurations pi) 4)
+    (let* ([t* '(2 1 4 2)]
+           [pi (make-performance-info 'example
+                 #:src "EXAMPLE"
+                 #:num-units (log2 (length t*))
+                 #:baseline-runtime (first t*)
+                 #:untyped-runtime (first t*)
+                 #:typed-runtime (last t*)
+                 #:make-in-configurations (λ (pi) (for/list ([t (in-list t*)] [i (in-naturals)]) (configuration-info t i (list t)))))])
+      (check-equal? (performance-info->num-configurations pi) 4)
       (check-equal? (min-overhead pi) 1/2)
-      (check-equal? (max-overhead pi) 10)
-      (check-equal? (mean-overhead pi) 27/8)
-      (check-equal? (typed/retic-ratio pi) 2)
-      (check-equal? ((deliverable 2) pi) 3)
-      (check-equal? ((deliverable 10) pi) 4)
-      (let () ;; filter-time* tests
-        (check-equal? (filter-time* pi (λ (t) (= t 100))) (list 100))
-        (check-equal? (filter-time* pi (λ (t) (= t 5))) (list 5))
-        (check-equal? (filter-time* pi (λ (t) (< t 20))) (list 10 5))
-        (void))
+      (check-equal? (max-overhead pi) 2)
+      (check-equal? (mean-overhead pi) 11/8)
+      (check-equal? (typed/untyped-ratio pi) 1)
+      (check-equal? ((deliverable 1.8) pi) 4)
       (void)))
 )
-
-;; -----------------------------------------------------------------------------
-
-#;(module+ main
-  (require racket/cmdline)
-  (define *fix-num-types?* (make-parameter #f))
-  (command-line
-   #:program "perf-info"
-   #:once-each
-   [("--fix-num-types") "Reset the type counts in the given files" (*fix-num-types?* #t)]
-   #:args benchmark-name*
-   (cond
-    [(null? benchmark-name*)
-     (printf "usage: rp:perf-info <benchmark-name> ...~n")]
-    [(*fix-num-types?*)
-     (void (map fix-num-types benchmark-name*))]
-    [(null? (cdr benchmark-name*))
-     (quick-performance-info (car benchmark-name*))]
-    [else
-     (for ([n (in-list benchmark-name*)])
-       (with-handlers ([exn:fail:contract? (λ (e) (printf "WARNING: failure processing '~a'~n" n))])
-         (quick-performance-info n)))])))
-
