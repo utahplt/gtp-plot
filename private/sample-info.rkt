@@ -49,7 +49,7 @@
   (for/fold ([ss #f])
             ([src (in-list src*)])
     (define pi%s (performance-info-update-src pi src))
-    (define new-ss (count-configurations pi%s (λ (r) #true)))
+    (define new-ss (count-configurations pi%s (λ (cfg) #true)))
     (cond
      [(not ss)
       new-ss]

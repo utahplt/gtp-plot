@@ -2,7 +2,7 @@
 
 (require racket/contract)
 (provide
-  reticulated-data?
+  reticulated-info?
   (contract-out
    [make-reticulated-info
     (-> reticulated-data? performance-info?)]
@@ -37,9 +37,11 @@
 (define UNTYPED-SUFFIX (string-append "retic-untyped" DATA-SUFFIX))
 (define META-SUFFIX (string-append "meta.rktd"))
 
-(define SAMPLE-GLOB (string-append "sample-*~a" DATA-SUFFIX))
+(define SAMPLE-GLOB (string-append "sample-*" DATA-SUFFIX))
 
 (define METADATA-KEY* '(num-units))
+
+(define UNDEFINED-SRC "AMBIGUOUS")
 
 (struct reticulated-info performance-info ()
   #:transparent
@@ -75,7 +77,7 @@
   (define ri
     (reticulated-info
       (string->symbol name)
-      "AMBIGUOUS"
+      UNDEFINED-SRC
       num-units
       baseline-runtime
       untyped-runtime
@@ -109,8 +111,11 @@
     in-reticulated-configurations))
 
 (define (in-reticulated-configurations pi)
+  (define src (performance-info->src pi))
+  (when (equal? src UNDEFINED-SRC)
+    (raise-argument-error 'in-configurations "reticulated-info? with exhaustive data" pi))
   (define go
-    (let ([p (open-input-file (performance-info->src pi))]
+    (let ([p (open-input-file src)]
           [line-number (box 0)])
       (λ ()
         (define ln (read-line p))
@@ -174,14 +179,14 @@
             (log-gtp-plot-error "expected nonnegative real, got ~a in line ~a of file ~a" ln i path)
             acc))))))
 
-(define/contract (file->reticulated-meta path)
-  (-> path-string? reticulated-meta?)
-  (file->value path))
-
 (define (reticulated-meta? x)
   (and (hash? x)
        (for/and ([k (in-list METADATA-KEY*)])
          (hash-has-key? x k))))
+
+(define/contract (file->reticulated-meta path)
+  (-> path-string? reticulated-meta?)
+  (file->value path))
 
 (define (reticulated-meta->num-units rm)
   (or (hash-ref rm 'num-units #f)
@@ -295,12 +300,215 @@
 ;; =============================================================================
 
 (module+ test
-  (require rackunit rackunit-abbrevs racket/runtime-path)
+  (require rackunit rackunit-abbrevs racket/runtime-path racket/list)
 
   (define-runtime-path fannkuch-path "./test/fannkuch")
   (define-runtime-path espionage-path "./test/espionage")
   (define-runtime-path sample_fsm-path "./test/sample_fsm")
 
+  #;(test-case "fannkuch"
+    (define F (make-reticulated-info fannkuch-path))
 
+    (check-true reticulated-info? F)
+    (check-equal?
+      (performance-info->name F)
+      'fannkuch)
+    (check-equal?
+      (performance-info->src F)
+      (build-path fannkuch-path "fannkuch.tab"))
+    (check-equal?
+      (performance-info->num-units F)
+      1)
+    (check-equal?
+      (performance-info->num-configurations F)
+      2)
+    (check-equal?
+      (rnd (performance-info->baseline-runtime F))
+      "12.23")
+    (check-equal?
+      (rnd (performance-info->untyped-runtime F))
+      "13.94")
+    (check-equal?
+      (rnd (performance-info->typed-runtime F))
+      "14.06")
+    (check-equal?
+      (for/list ([cfg (in-configurations F)]) (configuration-info->id cfg))
+      '((0) (1)))
+    (check-equal?
+      (count-configurations F (λ (cfg) #true))
+      2)
+    (check-equal?
+      ((deliverable 0.5) F)
+      0)
+    (check-equal?
+      ((deliverable 1.4) F)
+      2)
+    (check-equal?
+      (length (filter-configurations F (λ (r) #true)))
+      2)
+    (check-equal?
+      (rnd (max-overhead F))
+      "1.15")
+    (check-equal?
+      (rnd (mean-overhead F))
+      "1.15")
+    (check-equal?
+      (rnd (min-overhead F))
+      "1.14")
+    (check-equal?
+      (rnd (typed/baseline-ratio F))
+      "1.15")
+    (check-equal?
+      (rnd (typed/untyped-ratio F))
+      "1.01")
+    (check-equal?
+      (rnd (untyped/baseline-ratio F))
+      "1.14"))
+
+  #;(test-case "espionage"
+    (define E (make-reticulated-info espionage-path))
+
+    (check-equal?
+      (performance-info->name E)
+      'espionage)
+    (check-not-equal?
+      (performance-info->src E)
+      (build-path espionage-path "espionage.tab"))
+    (check-equal?
+      (last (string-split (path->string (performance-info->src E)) "."))
+      "tab")
+    (check-equal?
+      (performance-info->num-units E)
+      12)
+    (check-equal?
+      (performance-info->num-configurations E)
+      4096)
+    (check-equal?
+      (rnd (performance-info->baseline-runtime E))
+      "1.60")
+    (check-equal?
+      (rnd (performance-info->untyped-runtime E))
+      "4.60")
+    (check-equal?
+      (rnd (performance-info->typed-runtime E))
+      "8.23")
+    (let ([id* (for/list ([cfg (in-configurations E)]) (configuration-info->id cfg))])
+      (check-equal? (length id*) 4096)
+      (check-true (for/and ([id (in-list id*)]) (= 2 (length id)))))
+    (check-equal?
+      (count-configurations E (λ (cfg) (= 0 (car (configuration-info->id cfg)))))
+      32)
+    (check-equal?
+      ((deliverable 4.0) E)
+      2048)
+    (check-equal?
+      (rnd (max-overhead E))
+      "5.39")
+    (check-equal?
+      (rnd (typed/baseline-ratio E))
+      "5.14")
+    (check-equal?
+      (rnd (typed/untyped-ratio E))
+      "1.79")
+    (check-equal?
+      (rnd (untyped/baseline-ratio E))
+      "2.87"))
+
+  #;(test-case "sample_fsm"
+    (define S (make-reticulated-info sample_fsm-path))
+
+    (check-pred sample-info? S)
+    (check-equal?
+      (performance-info->name S)
+      'sample_fsm)
+    (check-not-equal?
+      (performance-info->src S)
+      (build-path sample_fsm-path "sample_fsm.tab"))
+    (check-equal?
+      (performance-info->num-units S)
+      19)
+    (check-equal?
+      (performance-info->num-configurations S)
+      524288)
+    (check-equal?
+      (rnd (performance-info->baseline-runtime S))
+      "0.45")
+    (check-equal?
+      (rnd (performance-info->untyped-runtime S))
+      "1.26")
+    (check-equal?
+      (rnd (performance-info->typed-runtime S))
+      "2.72")
+    (check-exn exn:fail:contract?
+      (λ () (in-configurations S)))
+    (let ([pi* (sample-info->performance-info* S)])
+      (check-equal?
+        (map (deliverable 4) pi*)
+        '(137 139 136 145 146 143 143 142 150 148)))
+    (check-equal?
+      (rnd (typed/baseline-ratio S))
+      "6.07")
+    (check-equal?
+      (rnd (typed/untyped-ratio S))
+      "2.16")
+    (check-equal?
+      (rnd (untyped/baseline-ratio S))
+      "2.80"))
+
+  (test-case "reticulated-exhaustive-directory?"
+    (check-true (reticulated-exhaustive-directory? fannkuch-path))
+    (check-false (reticulated-exhaustive-directory? sample_fsm-path)))
+
+  (test-case "sample-directory"
+    (check-false (reticulated-sample-directory? fannkuch-path))
+    (check-true (reticulated-sample-directory? sample_fsm-path)))
+
+  (test-case "parse-directory-name"
+    (check-equal? (parse-reticulated-directory-name fannkuch-path) "fannkuch")
+    (check-equal? (parse-reticulated-directory-name sample_fsm-path) "sample_fsm"))
+
+  (test-case "file->runtime*"
+    (let ([t* (file->runtime* (build-path espionage-path "espionage-python.tab"))])
+      (check-equal? (length t*) 80)
+      (check-equal? (rnd (mean t*)) "1.60")))
+
+  (test-case "reticulated-meta?"
+    (check-true (reticulated-meta? (make-immutable-hash '((num-units . 4096)))))
+    (check-false (reticulated-meta? #f))
+    (check-false (reticulated-meta? (make-immutable-hash '()))))
+
+  (test-case "typed-configuration?"
+    (check-true (typed-configuration? '(0 0 0)))
+    (check-true (typed-configuration? '()))
+    (check-false (typed-configuration? '(1 0)))
+    (check-false (typed-configuration? '(9 8 7 7 9))))
+
+  (test-case "parse-line"
+    (check-equal?
+      (parse-line "0-0	4	[1, 2, 2, 3]")
+      (list "0-0" "4" "[1, 2, 2, 3]"))
+    (check-exn exn:fail:contract?
+      (λ () (parse-line ""))))
+
+  (test-case "string->num-types"
+    (check-equal?
+      (string->num-types "8")
+      8)
+    (check-exn exn:fail:contract?
+      (λ () (string->num-types "0.3")))
+    (check-exn exn:fail:contract?
+      (λ () (string->num-types "#f"))))
+
+  (test-case "string->time*"
+    (check-equal?
+      (string->time* "[1, 2, 3]")
+      '(1 2 3))
+    (check-equal?
+      (string->time* "[1.23, 4.554]")
+      '(1.23 4.554))
+    (check-exn exn:fail:contract?
+      (λ () (string->time* "[]")))
+    (check-exn exn:fail:contract?
+      (λ () (string->time* "[1, -2]"))))
 )
 
