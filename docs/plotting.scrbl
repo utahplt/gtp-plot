@@ -20,3 +20,5 @@
 @defmodule[gtp-plot/plot]
 
 Run @exec{raco gtp-plot --help}.
+
+@; TODO gallery
