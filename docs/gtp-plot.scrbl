@@ -1,8 +1,16 @@
 #lang scribble/manual
 @require[
   (for-label
+    gtp-plot/configuration-info
+    gtp-plot/performance-info
+    gtp-plot/reticulated-info
+    gtp-plot/sample-info
+    gtp-plot/typed-racket-info
+    gtp-plot/util
+    pict
     racket/base
     racket/contract
+    (only-in racket/math natural?)
     (only-in openssl/md5 md5))]
 
 @title{GTP plot}
@@ -20,15 +28,14 @@ A gradual typing system lets programs mix @tech{dynamically typed} and
  @tech{statically typed} code.
 @itemlist[
 @item{
-  @deftech{dynamically typed} code avoids type errors at run-time,
-   using run-time checks.
+  @deftech{dynamically typed} code avoids @tech{type errors} at @tech{run-time},
+   using @tech{run-time checks}.
 }
 @item{
-  @deftech{statically typed} code avoids type errors at compile-time,
-   using ahead-of-time checks.
+  @deftech{statically typed} code avoids @tech{type errors} at @tech{compile-time},
+   using @tech{ahead-of-time checks}.
 }
 ]
-@margin-note{See @secref{glossary} for more definitions.}
 
 Typed Racket is a gradual typing system because programs can mix
  statically-typed @racketmodname[typed/racket] code
@@ -107,9 +114,131 @@ TBA
 }
 
 @; ---
-@defmodule[gtp-plot/performance-info]{
-  
+@defmodule[gtp-plot/performance-info]
+
+@defidform[performance-info]{
+  A struct type, exported to allow subtyping.
+
+  A @deftech{performance info} struct contains performance data for one
+   gradually typed program.
 }
+
+@defproc[(performance-info? [x any/c]) boolean?]{
+  Predicate for @tech{performance info} structures.
+}
+
+@defproc[(make-performance-info [name symbol?]
+                                [#:src src path-string?]
+                                [#:num-units num-units natural?]
+                                [#:baseline-runtime baseline-runtime nonnegative-real/c]
+                                [#:untyped-runtime untyped-runtime nonnegative-real/c]
+                                [#:typed-runtime typed-runtime nonnegative-real/c]
+                                [#:make-in-configurations make-in-configurations (-> performance-info? (sequence/c configuration-info?))])
+         performance-info?]{
+  Builds a @tech{performance info} structure for the data for a gradually-typed program.
+
+  @itemlist[
+  @item{
+    @racket[name] is the name of the program;
+  }
+  @item{
+    @racket[src] is a performance data for the program,
+     this file can be in any format that @racket[make-in-configurations] understands;
+  }
+  @item{
+    @racket[num-units] is the number of @tech{typeable components} in the program;
+  }
+  @item{
+    @racket[baseline-runtime] is the performance of the given program without any gradual typing;
+  }
+  @item{
+    @racket[untyped-runtime] is the performance of the program with no type annotations,
+     this may be the same as the baseline runtime;
+  }
+  @item{
+    @racket[typed-runtime] is the performance of the program when fully-typed;
+  }
+  @item{
+    @racket[make-in-configurations] is a function that accepts a @tech{performance info}
+     structure (specifically, itself) and returns a sequence with the data
+     for each configuration in the program.
+  }
+  ]
+}
+
+@deftogether[(
+  @defproc[(performance-info->name [pi performance-info?]) symbol?]
+  @defproc[(performance-info->src [pi performance-info?]) path-string?]
+  @defproc[(performance-info->num-units [pi performance-info?]) natural?]
+  @defproc[(performance-info->baseline-runtime [pi performance-info?]) nonnegative-real/c]
+  @defproc[(performance-info->untyped-runtime [pi performance-info?]) nonnegative-real/c]
+  @defproc[(performance-info->typed-runtime [pi performance-info?]) nonnegative-real/c]
+)]{
+  Getter functions.
+}
+
+@defproc[(performance-info->num-configurations [pi performance-info?]) natural?]{
+  Return the number of configurations in the program.
+  Same as @racket[(expt 2 (performance-info->num-units _pi))].
+}
+
+@defproc[(in-configurations [pi performance-info?]) (sequence/c configuration-info?)]{
+  Returns all configuration data from the given dataset.
+}
+
+@defproc[(deliverable [D nonnegative-real/c]) (-> performance-info? natural?)]{
+  Returns a predicate that counts the number of @racket[D]-@emph{deliverable} configurations
+   in a program.
+
+  A configuration is @racket[D]-@emph{deliverable} if its performance is at most
+   @racket[D]x slower than the baseline runtime.
+}
+
+@defproc*[(
+  [(overhead [pi performance-info?] [t nonnegative-real/c]) nonnegative-real/c]
+  [(overhead [pi performance-info?]) (-> nonnegative-real/c nonnegative-real/c)]
+)]{
+  @racket[(overhead pi t)] returns the overhead of the running time @racket[t]
+   relative to the baseline runtime of the given program.
+  The second form is a curried version of the first.
+}
+
+@defproc[(count-configuration [pi performance-info?] [f (-> configuration-info? any)]) natural?]{
+  Counts the number of configurations that satisfy the given predicate.
+}
+
+@defproc[(filter-configurations [pi performance-info?] [f (-> nonnegative-real/c any)]) (listof configuration-info?)]{
+  Returns a list of configurations that satisfy the given performance predicate.
+}
+
+@deftogether[(
+  @defproc[(max-overhead [pi performance-info?]) nonnegative-real/c]
+  @defproc[(mean-overhead [pi performance-info?]) nonnegative-real/c]
+  @defproc[(min-overhead [pi performance-info?]) nonnegative-real/c]
+)]{
+  Return the minimum, average, and maximum overheads in the given dataset.
+}
+
+@deftogether[(
+  @defproc[(typed/baseline-ratio [pi performance-info?]) nonnegative-real/c]
+  @defproc[(typed/untyped-ratio [pi performance-info?]) nonnegative-real/c]
+  @defproc[(untyped/baseline-ratio [pi performance-info?]) nonnegative-real/c]
+)]{
+  Return a performance ratio.
+  For example, the typed/untyped ratio is the performance of the fully-typed
+   configuration divided by the performance of the untyped configuration.
+}
+
+@defproc[(fold/mean-runtime [pi performance-info?] [f (-> any/c nonnegative-real/c any)] [#:init init (or/c #f (-> nonnegative-real/c any)) #f]) any]{
+  Folds over a dataset.
+
+  If @racket[init] is @racket[#false], then the initial accumulator is the
+   mean running time of some configuration and @racket[f] must return a nonnegative real number.
+  If @racket[init] is a procedure, then the initial accumulator is the
+   result of applying @racket[init] to an arbitrary configuration.
+}
+
+
 
 @defmodule[gtp-plot/sample-info]{
   Represents sampled data
@@ -139,6 +268,7 @@ TBA
 @; -----------------------------------------------------------------------------
 @section[#:tag "gtp-plotting"]{Plot}
 
+TODO
 
 
 @; -----------------------------------------------------------------------------
@@ -272,13 +402,95 @@ See also @racketmodname[racket/system].
   Same as @racket[(call-with-input-file filename md5)].
 }
 
-@defmodule[gtp-plot/util]{
-  TBA
-}
+@defmodule[gtp-plot/util]
 
 @defproc[(nonnegative-real/c [x any/c]) boolean?]{
   Flat contract for non-negative real numbers.
 }
 
+@defproc[(confidence-interval [r* (listof real?)] [#:cv confidence-value nonnegative-real/c 1.96]) (cons/c real? real?)]{
+  Return a 95% confidence interval for the given numbers at the given confidence value.
+}
+
+@defproc[(tab-split [str string?]) (listof string?)]{
+  Split a string by tab characters.
+}
+
+@defproc[(tab-join [str* (listof string?)]) string?]{
+  Join a list of strings by tab characters.
+}
+
+@defproc[(path-string->string [ps path-string?]) string?]{
+  Convert a path or string to a string.
+}
+
+@defproc[(ensure-directory [ps path-string?]) void?]{
+  If the given directory exists, do nothing.
+  Otherwise, create it.
+}
+
+@defproc[(rnd [r real?]) string?]{
+  Round the given number to two decimal places.
+}
+
+@defproc[(pct [a real?] [b real?]) real?]{
+  Same as @racket[(* 100 (/ a b))].
+}
+
+@defproc[(log2 [n natural?]) natural?]{
+  Compute the base-2 logarithm of a number.
+
+  Assumes @racket[n] is a power of 2.
+}
+
+@defproc[(order-of-magnitude [n real?]) natural?]{
+  Count the number of digits in the given number.
+}
+
+@defproc[(file-remove-extension [ps path-string?]) path-string?]{
+  Remove the extension from the given filename.
+}
+
+@defproc[(save-pict [out-path path-string?] [p pict?]) boolean?]{
+  Write the given pict to the given filename in @tt{.png} format.
+}
+
+@defproc[(columnize [x* list?] [num-cols natural?]) (listof list?)]{
+  Divide a list into almost-equally-sized lists.
+}
+
+@defproc[(force/cpu-time [thunk (-> any)]) (values any/c natural?)]{
+  Force the given thunk and record its running time.
+  Return both the result of the thunk and the CPU time (as reported by @racket[time-apply]).
+}
+
+@defproc[(natural->bitstring [n natural?] [#:pad pad natural?]) string?]{
+  Return a binary representation of @racket[n] with @racket[pad] bits.
+}
+
+@defproc[(bitstring->natural [str string?]) natural?]{
+  Parse a string of @racket{1} and @racket{0} digits as a binary number,
+   return the base-10 representation of the parsed number.
+}
+
+@defproc[(count-zero-bits [str string?]) natural?]{
+  Count the number of @racket[#\0] characters in a string of @racket{1} and
+   @racket{0} digits.
+}
+
+@deftogether[(
+  @defidform[gtp-plot-logger]
+  @defidform[log-gtp-plot-debug]
+  @defidform[log-gtp-plot-info]
+  @defidform[log-gtp-plot-warning]
+  @defidform[log-gtp-plot-error]
+  @defidform[log-gtp-plot-fatal]
+)]{
+  Subscribe to @tt{gtp-logger} for diagnostics.
+
+  See also: @racket[define-logger].
+}
+
 @; -----------------------------------------------------------------------------
+
 @section[#:tag "gtp-glossary"]{GTP Glossary}

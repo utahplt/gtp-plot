@@ -4,8 +4,6 @@
 
 (require racket/contract)
 (provide
-  confidence-interval
-
   nonnegative-real/c
 
   gtp-plot-logger
@@ -16,6 +14,12 @@
   log-gtp-plot-fatal
 
   (contract-out
+    [confidence-interval
+     (-> (listof nonnegative-real/c) #:cv nonnegative-real/c (cons/c real? nonnegative-real/c))]
+
+    [confidence-offset
+     (-> (listof nonnegative-real/c) #:cv nonnegative-real/c nonnegative-real/c)]
+
     [tab-split
      (-> string? (listof string?))]
     ;; Split a list of string by its tab characters
@@ -61,7 +65,7 @@
     ;; Order / partitioning of elements is unspecified.
 
     [force/cpu-time
-     (-> (-> any/c) (values any/c exact-nonnegative-integer?))]
+     (-> (-> any) (values any/c exact-nonnegative-integer?))]
 
     [natural->bitstring
      (-> exact-nonnegative-integer? #:pad exact-nonnegative-integer? string?)]
@@ -137,7 +141,7 @@
   (define i (string-last-index-of no-ext #\_))
   (string-append (substring no-ext 0 i) "." (substring no-ext (+ i 1))))
 
-(define (confidence-interval x* #:cv [cv 1.96])
+(define (confidence-offset x* #:cv [cv 1.96])
   (define u (mean x*))
   (define n (length x*))
   (define s (stddev/mean u x*))
@@ -145,6 +149,11 @@
   (if (negative? cv-offset)
     (raise-user-error 'confidence-interval "got negative cv offset ~a\n" cv-offset)
     cv-offset))
+
+(define (confidence-interval x* #:cv [cv 1.96])
+  (define offset (confidence-interval x* #:cv cv))
+  (define u (mean x*))
+  (cons (- u offset) (+ u offset)))
 
 (define (log2 n)
   (if (= n 1)

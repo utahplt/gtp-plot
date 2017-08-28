@@ -1,2 +1,2 @@
 #lang reprovide
-gtp-plot/private/typed-racket/info
+gtp-plot/private/typed-racket-info

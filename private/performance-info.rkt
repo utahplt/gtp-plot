@@ -62,56 +62,56 @@
    ;;  that satisfy the given predicate.
 
    [deliverable
-    (-> real? (-> performance-info? natural?))]
+    (-> nonnegative-real/c (-> performance-info? natural?))]
    ;; `((deliverable D) p)` returns the number of configurations in `p`
    ;; that have overhead at most `D` relative to the baseline configuration of `p`
 
    [fold/mean-runtime
     (-> performance-info?
         (-> any/c nonnegative-real/c any)
-        #:init (or/c #f (-> real? any))
+        #:init (or/c #f (-> nonnegative-real/c any))
         any)]
 
    [filter-configurations
-    (-> performance-info? (-> real? any) (listof configuration-info?))]
+    (-> performance-info? (-> nonnegative-real/c any) (listof configuration-info?))]
    ;; Return the configurations whose mean running time satisfies the given predicate.
 
    [overhead
     (case->
-     (-> performance-info? real? real?)
-     (-> performance-info? (-> real? real?)))]
+     (-> performance-info? nonnegative-real/c nonnegative-real/c)
+     (-> performance-info? (-> nonnegative-real/c nonnegative-real/c)))]
    ;; `(overhead p v)` returns the overhead of the running time `v` relative
    ;;  to the baseline runtime of `p`
 
    [make-D-deliverable?
-    (-> real? performance-info? (-> (or/c configuration-info? real?) boolean?))]
+    (-> nonnegative-real/c performance-info? (-> (or/c configuration-info? nonnegative-real/c) boolean?))]
    ;; Return a function that decides whether a given running time is
    ;;  D-deliverable.
 
    [max-overhead
-    (-> performance-info? real?)]
+    (-> performance-info? nonnegative-real/c)]
    ;; Returns the maximum observed overhead of any configuration in `p`
 
    [mean-overhead
-    (-> performance-info? real?)]
+    (-> performance-info? nonnegative-real/c)]
    ;; Returns the average overhead across all configurations in `p`
 
    [min-overhead
-    (-> performance-info? real?)]
+    (-> performance-info? nonnegative-real/c)]
    ;; Returns the lowest observed overhead of any configuration in `p`
 
    [typed/baseline-ratio
-    (-> performance-info? real?)]
+    (-> performance-info? nonnegative-real/c)]
    ;; Returns the overhead of the fully-typed configuration in `p`
    ;;  relative to the baseline performance
 
    [typed/untyped-ratio
-    (-> performance-info? real?)]
+    (-> performance-info? nonnegative-real/c)]
    ;; Returns the overhead of the fully-typed configuration in `p`
    ;;  relative to the untyped configuration
 
    [untyped/baseline-ratio
-    (-> performance-info? real?)]
+    (-> performance-info? nonnegative-real/c)]
    ;; Returns the overhead of the untyped configuration in `p`
    ;;  relative to the baseline configuration
 ))
