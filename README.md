@@ -31,12 +31,23 @@ $ raco pkg install ./gtp-plot
 ```
 
 
+### Documentation
+
+For command-line options:
+
+```
+$ raco gtp-plot --help
+```
+
+For the API:
+
+<http://docs.racket-lang.org/gtp-plot/index.html>
+
+
 ### History
 
 Influenced by:
 - <https://github.com/nuprl/retic_performance>
 - <https://github.com/nuprl/gradual-typing-performance>
-
-but those repos are tailored to specific measuring projects.
 
 Thank you Neil Toronto for the Racket [plot](https://github.com/racket/plot) library.
