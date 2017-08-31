@@ -10,7 +10,7 @@
      (-> performance-info? pict?)]
 
     [overhead-plot
-     (-> performance-info? pict?)]
+     (-> (treeof performance-info?) pict?)]
 
     [samples-plot
      (-> performance-info? pict?)]
@@ -40,6 +40,7 @@
   (only-in racket/format
     ~r)
   (only-in racket/list
+    flatten
     range)
   (only-in racket/math
     exact-ceiling
@@ -141,7 +142,7 @@
 
 (define (overhead-plot pre-pi*)
   (define multi? (pair? pre-pi*))
-  (define pi* (if multi? pre-pi* (list pre-pi*)))
+  (define pi* (if multi? (flatten pre-pi*) (list pre-pi*)))
   ;; TODO use standard-D
   (define body (maybe-freeze
     (parameterize ([plot-x-ticks (make-overhead-x-ticks)]
