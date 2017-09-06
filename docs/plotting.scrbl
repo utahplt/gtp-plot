@@ -75,7 +75,7 @@ For command-line options, run @exec{raco gtp-plot --help}.
    @racket[_N] is the length of the list @racket[(configuration-info->runtime* _cfg)].
   These points are spread across the @math{x}-axis bucket that represents
    configurations with @racket[_T] type annotations, where @racket[_T] is the
-   value of @racket[(configuration->num-types _cfg)].
+   value of @racket[(configuration-info->num-types _cfg)].
 
   @render-demo[(exact-runtime-plot mbta)]
 }
