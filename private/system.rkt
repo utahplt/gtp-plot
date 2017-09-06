@@ -59,23 +59,27 @@
   (require rackunit racket/runtime-path (only-in racket/string string-split))
   (define-runtime-path a-text-file "README.md")
 
-  (test-case "shell"
-    (check-regexp-match #rx"^Welcome to Racket"
-      (shell "racket" '("--version"))))
+  (unless (or (eq? (system-type 'os) 'windows)
+              (equal? "true" (getenv "CI")))
 
-  (test-case "find-exe"
-    (check-equal?
-      (find-exe "racket")
-      (find-executable-path "racket"))
-    (check-exn exn:fail:user?
-      (lambda () (find-exe "this-is-not-racket-this-is-sparta"))))
+    (test-case "shell"
+      (check-regexp-match #rx"^Welcome to Racket"
+        (shell "racket" '("--version"))))
 
-  (test-case "md5sum"
-    (define (check-md5 ps)
-      (define openssl-md5 (md5sum a-text-file))
-      (define system-md5 (car (string-split (shell "md5sum" (path->string a-text-file)))))
-      (check-equal? openssl-md5 system-md5))
+    (test-case "find-exe"
+      (check-equal?
+        (find-exe "racket")
+        (find-executable-path "racket"))
+      (check-exn exn:fail:user?
+        (lambda () (find-exe "this-is-not-racket-this-is-sparta"))))
 
-    (check-md5 a-text-file)
+    (test-case "md5sum"
+      (define (check-md5 ps)
+        (define openssl-md5 (md5sum a-text-file))
+        (define system-md5 (car (string-split (shell "md5sum" (path->string a-text-file)))))
+        (check-equal? openssl-md5 system-md5))
+
+      (check-md5 a-text-file)
+    )
   )
 )
