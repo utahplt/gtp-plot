@@ -405,9 +405,10 @@
 ;; make-simple-deliverable-counter : (-> performance-info? (-> real? natural?))
 ;; Specification for `make-deliverable-counter`
 (define (make-simple-deliverable-counter pi)
-  (define nc (performance-info->num-configurations pi))
+  (define nc (count-configurations pi (λ (_) #true)))
   (λ (D)
-    (pct (count-configurations pi (make-D-deliverable? D pi)) nc)))
+    (define c (count-configurations pi (make-D-deliverable? D pi)))
+    (pct c nc)))
 
 ;; make-deliverable-counter : (-> performance-info? (-> real? natural?))
 ;; Same behavior as `make-deliverable-counter`, but `(make-deliverable-counter p)`
@@ -443,7 +444,7 @@
 
 (define (make-sample-function-interval pi*)
   (define (make-get-percents)
-    (let ([ctr* (map make-deliverable-counter pi*)])
+    (let ([ctr* (map make-simple-deliverable-counter pi*)])
       (λ (r)
         (for/list ([ctr (in-list ctr*)])
           (ctr r)))))
