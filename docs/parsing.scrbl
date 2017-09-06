@@ -119,13 +119,3 @@
   Predicate for Reticulated datasets.
 }
 
-@defproc[(reticulated-info->sample-info [ri reticulated-info?]) sample-info?]{
-  Extend the given info structure with the sample datasets for the benchmark,
-   if any.
-
-  Avoid this function.
-  It is likely to disappear in a future release.
-}
-
-
-

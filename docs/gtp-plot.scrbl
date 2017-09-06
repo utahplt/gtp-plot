@@ -50,7 +50,7 @@ One way to do this is to use run-time checks:
   and receives a dynamically typed value @racket[_v],
 }
 @item{
-  then perform a run-time check, e.g., @racket[(if (_T? _v) _v (error 'bad-type))]
+  then check something like @racket[(if (_T? _v) _v (error 'bad-type))]
 }
 ]
 

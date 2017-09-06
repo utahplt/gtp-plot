@@ -38,10 +38,7 @@
    [(typed-racket-data? x)
     (make-typed-racket-info x)]
    [(reticulated-data? x)
-    (define pi (make-reticulated-info x))
-    (if (reticulated-sample-directory? x)
-      (reticulated-info->sample-info pi)
-      pi)]
+    (make-reticulated-info x)]
    [else
     (raise-user-error GTP-PLOT "failed to derive performance-info from input ~a" x)]))
 

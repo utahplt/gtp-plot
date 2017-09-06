@@ -9,9 +9,7 @@
    [reticulated-info?
     (-> any/c any)]
    [make-reticulated-info
-    (-> reticulated-data? performance-info?)]
-   [reticulated-info->sample-info
-    (-> performance-info? sample-info?)]))
+    (-> reticulated-data? performance-info?)]))
 
 (require
   gtp-plot/configuration-info
@@ -54,14 +52,10 @@
      (fprintf port "#<reticulated-info:~a>" (performance-info->name v)))])
 
 (define (reticulated-data? path)
-  (and (path-string?)
+  (and (path-string? path)
        (directory-exists? path)
        (or (reticulated-exhaustive-directory? path)
            (reticulated-sample-directory? path))))
-
-(define (reticulated-info->sample-info ri)
-  (define src (performance-info->src ri))
-  (make-sample-info ri (glob (build-path src SAMPLE-GLOB))))
 
 (define (make-reticulated-info path)
   (if (reticulated-sample-directory? path)

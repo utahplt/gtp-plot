@@ -5,7 +5,7 @@ gtp-plot
 
 For visualizing gradual typing performance.
 
-![tetris-6.9-performance](example/tetris-6.9.png)
+![tetris-6.9-performance](docs/data/tetris-6.9.png)
 
 
 ### Motivation

@@ -19,6 +19,28 @@
 @defstruct[configuration-info ([id any/c] [num-types natural?] [runtime* nonnegative-real/c]) #:prefab]{
   A @deftech{configuration info} structure describes the performance of
    one gradually-typed configuration of a program.
+
+  The @racket[id] field is an identifier for the configuration; the purpose
+   is to distinguish one configuration from other gradually-typed versions
+   of the same program.
+  The @racket[num-types] field is the number of type annotations in the program.
+  The @racket[runtime*] field is a list of running times for the configuration.
+
+  For example, a fully-typed Typed Racket program with @racket[_N] modules
+   can be gradually typed in @racket[(expt 2 _N)] different ways by removing
+   some of the @racket[_N] type annotations.
+  The @racketmodname[gtp-plot/typed-racket-info] module represents configurations
+   with "bitstrings" --- strings of @racket[#\0] and @racket[#\1] characters ---
+   based on the alphabetical ordering of the programs' modules.
+  With this in mind, here are some configurations for a Typed Racket program
+   with four modules:
+
+  @racketblock[
+    #s(configuration-info "0000" 0 (4133 4074 4163))
+    #s(configuration-info "0001" 1 (6380 6189 6423))
+    #s(configuration-info "0010" 1 (11075 10937 11863))
+    #s(configuration-info "0011" 2 (9384 9740 9418))
+  ]
 }
 
 @defproc[(configuration-info->id [cfg configuration-info?]) any/c]{
@@ -46,8 +68,13 @@
 @defidform[performance-info]{
   A struct type, exported to allow subtyping.
 
-  A @deftech{performance info} struct contains performance data for one
+  A @deftech{performance info} structure contains performance data for one
    gradually typed program.
+  An @deftech{exhaustive performance info} structure contains data for
+   all configurations in the program.
+  An @math{(r,s)} simple-random-approximate @deftech[#:key "SRA performance info"]{(SRA) performance info}
+   structure contains data for @math{r} samples of configurations where each
+   sample contains data for @math{s} configurations chosen uniformly at random.
 }
 
 @defproc[(performance-info? [x any/c]) boolean?]{
@@ -171,23 +198,22 @@
 @defmodule[gtp-plot/sample-info]
 
 @defproc[(sample-info? [x any/c]) boolean?]{
-  Predicate for @deftech{sample info} structures.
+  Predicate for @tech{SRA performance info} structures.
 }
 
 @defproc[(make-sample-info [pi performance-info?] [samples (listof path-string?)]) sample-info?]{
-  Make a @tech{sample info} structure from a @tech{performance info} structure
+  Make an @tech{SRA performance info} structure from a @tech{performance info} structure
    and sampled datasets.
   Logs an @racket['error]-level message to @racket[gtp-plot-logger] if
    the sampled datasets do not all contain the same number of configurations.
 }
 
 @defproc[(sample-info->sample-size [si sample-info?]) natural?]{
-  Count the number of configurations in each sample in the given @tech{sample info}
+  Count the number of configurations in each sample in the given @tech{SRA performance info}
    structure.
 }
 
 @defproc[(sample-info->performance-info* [si sample-info?]) (listof performance-info?)]{
-  Expand a @tech{sample info} structure to a list of @tech{performance info} structures.
+  Expand a @tech{SRA performance info} structure to a list of @tech{performance info} structures.
   Each structure represents one sample of configurations.
 }
-

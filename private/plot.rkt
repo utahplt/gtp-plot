@@ -73,7 +73,6 @@
 (defparam *LEGEND-VSPACE* 10 Pict-Units)
 (defparam *MAJOR-AXIS* 'X axis/c)
 (defparam *OVERHEAD-FONT-FACE* "bold" Font-Face)
-(defparam *OVERHEAD-FONT-SCALE* 0.03 Nonnegative-Real)
 (defparam *OVERHEAD-FREEZE-BODY* #f boolean?)
 (defparam *OVERHEAD-LABEL?* #f boolean?)
 (defparam *OVERHEAD-LINE-COLOR* 3 plot-color/c)
@@ -592,19 +591,21 @@
 ;; =============================================================================
 
 
-#;(module+ test
-  (require rackunit rackunit-abbrevs)
+(module+ test
+  (require
+    rackunit
+    rackunit-abbrevs
+    gtp-plot/reticulated-info
+    racket/runtime-path)
 
-  ;; TODO what to test?
-  ;; - actually works, makes plots for various inputs
-  ;; - same plots for "same" inputs
-  ;; - count-configs fucntion? but it's a plot/function
-  ;; - make ticks? also weird output format
-  ;; - add legend? ditto idk what besides comparing argb pixels
+  (define-runtime-path espionage-data "./test/espionage/")
+  (define espionage (make-reticulated-info espionage-data))
+
+  (define-runtime-path fsm-data "./test/sample_fsm/")
+  (define fsm (make-reticulated-info fsm-data))
 
   (test-case "deliverable-counter"
-    (define (check-deliverable-counter/cache bm-name)
-      (define pi (benchmark->performance-info (->benchmark-info bm-name)))
+    (define (check-deliverable-counter/cache pi)
       (define f0 (make-simple-deliverable-counter pi))
       (define f1 (make-deliverable-counter pi))
       (define seq (linear-seq 1 (*OVERHEAD-MAX*) (*OVERHEAD-SAMPLES*)))
@@ -616,9 +617,24 @@
       (check < t1 t0)
       (void))
 
-    ;; Maybe want to put a time limit on this. For me it's like 20 seconds, I don't mind --ben
-    (check-deliverable-counter/cache 'PythonFlow)
-    (check-deliverable-counter/cache 'call_simple)
+    (check-deliverable-counter/cache espionage)
   )
 
+  (test-case "overhead-plot"
+    (check-true (pict? (overhead-plot espionage))))
+
+  (test-case "exact-runtime-plot"
+    (check-true (pict? (exact-runtime-plot espionage))))
+
+  (test-case "rectangle-plot"
+    (check-true (pict? (rectangle-plot espionage))))
+
+  (test-case "cloud-plot"
+    (check-true (pict? (cloud-plot espionage))))
+
+  (test-case "samples-plot"
+    (check-true (pict? (samples-plot fsm))))
+
+  #;(test-case "validate-samples-plot"
+    (check-true (pict? (validate-samples-plot espionage))))
 )
