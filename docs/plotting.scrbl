@@ -14,10 +14,10 @@
     gtp-plot/typed-racket-info
     gtp-plot/util
     pict
+    plot/utils
     racket/base
     racket/contract
     racket/runtime-path
-    (only-in pict pict?)
     (only-in racket/math natural?))]
 
 @; -----------------------------------------------------------------------------
@@ -110,5 +110,73 @@ The appearance of these plots is subject to change.
   Intended for @tech{exhaustive performance info} structures.
 
   @render-demo[(rectangle-plot mbta)]
+}
+
+
+@section{Plot Parameters}
+
+@defparam[*FONT-SIZE* font-size exact-positive-integer? #:value 10]{
+  Controls font size of text in plots.
+}
+
+@defparam[*INTERVAL-ALPHA* ia nonnegative-real/c #:value 1]{
+  Sets the transparency of shaded plot regions.
+}
+
+@defparam[*OVERHEAD-FREEZE-BODY* freeze? boolean? #:value #f]{
+  When true, plotting functions will call @racket[freeze] on rendered plots
+   before returning.
+  This is useful for plots with a large number of elements.
+}
+
+@defparam[*OVERHEAD-LINE-COLOR* line-color plot-color/c #:value 3]{
+  Sets color of solid lines used in plots.
+}
+
+@defparam[*OVERHEAD-LINE-WIDTH* line-width nonnegative-real/c #:value 1]{
+  Sets width of solid lines used in plots.
+}
+
+@defparam[*OVERHEAD-MAX* x-max exact-positive-integer? #:value 10]{
+  Sets maximum @math{x}-value in overhead plots.
+}
+
+@deftogether[(
+  @defparam[*OVERHEAD-PLOT-HEIGHT* plot-height nonnegative-real/c #:value 300]
+  @defparam[*OVERHEAD-PLOT-WIDTH* plot-height nonnegative-real/c #:value 600]
+)]{
+  Sets height and width of plots.
+}
+
+@defparam[*OVERHEAD-SAMPLES* num-samples exact-positive-integer? #:value 20]{
+  Number of points used to draw the solid color line in overhead plots.
+}
+
+@defparam[*OVERHEAD-SHOW-RATIO* show? boolean? #:value #t]{
+  If true, plots come with a typed/baseline ratio.
+}
+
+@defparam[*POINT-ALPHA* pa nonnegative-real/c #:value 0.4]{
+  Sets translucency of points.
+}
+
+@defparam[*POINT-COLOR* pc plot-color/c #:value 2]{
+  Sets color of points.
+}
+
+@defparam[*POINT-SIZE* ps exact-positive-integer? #:value 3]{
+  Sets size of points.
+}
+
+@defparam[*POINT-SYMBOL* ps point-sym/c #:value 'fullcircle]{
+  Symbol used to draw points.
+}
+
+@defparam[*SAMPLE-COLOR* sc plot-color/c #:value "chocolate"]{
+  Color used to draw sample plots.
+}
+
+@defparam[*STANDARD-D* D (or/c #f positive?) #:value #f]{
+  A default overhead value.
 }
 
