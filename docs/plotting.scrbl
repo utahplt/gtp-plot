@@ -66,7 +66,7 @@ For command-line options, run @exec{raco gtp-plot --help}.
   @render-demo[(overhead-plot mbta)]
 }
 
-@defproc[(exact-runtime-plot [pi performance-info?]) pict?]{
+@defproc[(exact-runtime-plot [pi (treeof performance-info?)]) pict?]{
   Plots all runtimes for all configurations.
   The @math{x}-axis is the number of type annotations in the configuration,
    the @math{y}-axis is its running time.

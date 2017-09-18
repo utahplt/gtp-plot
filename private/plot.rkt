@@ -16,7 +16,7 @@
      (-> performance-info? pict?)]
 
     [exact-runtime-plot
-     (-> performance-info? pict?)]
+     (-> (treeof performance-info?) pict?)]
 
     [rectangle-plot
      (-> performance-info? pict?)]
@@ -78,7 +78,7 @@
 (defparam *OVERHEAD-LINE-COLOR* 3 plot-color/c)
 (defparam *OVERHEAD-LINE-STYLE* 'solid plot-pen-style/c)
 (defparam *OVERHEAD-LINE-WIDTH* 1 Nonnegative-Real)
-(defparam *OVERHEAD-MAX* 10 Natural)
+(defparam *OVERHEAD-MAX* 22 Natural)
 (defparam *OVERHEAD-PLOT-HEIGHT* 300 Pict-Units)
 (defparam *OVERHEAD-PLOT-WIDTH* 600 Pict-Units)
 (defparam *OVERHEAD-SAMPLES* 20 Natural)
@@ -97,28 +97,32 @@
 
 ;; -----------------------------------------------------------------------------
 
-(define (exact-runtime-plot pi)
+(define (exact-runtime-plot pre-pi*)
   ;; TODO use standard-D
-  (define nt (performance-info->num-units pi))
+  (define multi? (pair? pre-pi*))
+  (define pi* (if multi? (flatten pre-pi*) (list pre-pi*)))
+  (define nt (or (check= (map performance-info->num-units pi*))
+                 (raise-arguments-error 'exact-runtime-plot "incompatible performance-info structures" "pi*" pi*)))
   (define max-runtime (box 0))
   (define num-points (box 0))
   (define elem*
-    (parameterize ([*POINT-COLOR* 2]
-                   [*POINT-SYMBOL* 'fullcircle])
-      (list
-        (make-vrule* nt)
-        (for/fold ([acc '()])
-                  ([cfg (in-configurations pi)])
-          (define num-types (configuration-info->num-types cfg))
-          (define t* (configuration-info->runtime* cfg))
-          (cons
-            (configuration-points
-              (for/list ([t (in-list t*)]
-                         [x (in-list (linear-seq (- num-types (*CONFIGURATION-X-JITTER*)) (+ num-types (*CONFIGURATION-X-JITTER*)) (length t*)))])
-                (set-box! max-runtime (max (unbox max-runtime) t))
-                (set-box! num-points (+ (unbox num-points) 1))
-                (list x t)))
-            acc)))))
+    (list
+      (make-vrule* nt)
+      (for/list ([pi (in-list pi*)]
+                 [color (in-naturals (*POINT-COLOR*))])
+        (parameterize ([*POINT-COLOR* color])
+          (for/fold ([acc '()])
+                    ([cfg (in-configurations pi)])
+            (define num-types (configuration-info->num-types cfg))
+            (define t* (configuration-info->runtime* cfg))
+            (cons
+              (configuration-points
+                (for/list ([t (in-list t*)]
+                           [x (in-list (linear-seq (- num-types (*CONFIGURATION-X-JITTER*)) (+ num-types (*CONFIGURATION-X-JITTER*)) (length t*)))])
+                  (set-box! max-runtime (max (unbox max-runtime) t))
+                  (set-box! num-points (+ (unbox num-points) 1))
+                  (list x t)))
+              acc))))))
   (define y-max (exact-ceiling (unbox max-runtime)))
   (define body (maybe-freeze
     (parameterize ([plot-x-ticks (make-exact-runtime-xticks nt)]
@@ -137,12 +141,12 @@
         #:y-label (and (*OVERHEAD-LABEL?*) "Time (ms)")
         #:width (*OVERHEAD-PLOT-WIDTH*)
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
-  (exact-add-legend (performance-info->name pi) (unbox num-points) body))
+  (exact-add-legend (performance-info->name (car pi*)) (unbox num-points) body))
 
 (define (overhead-plot pre-pi*)
+  ;; TODO use standard-D
   (define multi? (pair? pre-pi*))
   (define pi* (if multi? (flatten pre-pi*) (list pre-pi*)))
-  ;; TODO use standard-D
   (define body (maybe-freeze
     (parameterize ([plot-x-ticks (make-overhead-x-ticks)]
                    [plot-x-transform log-transform]
@@ -541,7 +545,10 @@
 
 (define (exact-add-legend bm-name num-points pict)
   (define name (render-benchmark-name bm-name))
-  (define np (render-count num-points "points"))
+  (define np
+    (if (*OVERHEAD-SHOW-RATIO*)
+      (render-count num-points "points")
+      (blank 0 0)))
   (add-legend name pict np))
 
 (define (cloud-add-legend bm-name pict)
@@ -588,6 +595,18 @@
 
 (define (render-count n descr)
   (title-text (format "~a ~a" (add-commas n) descr)))
+
+(define (check= v*)
+  (let loop ([v* v*])
+    (cond
+     [(null? v*)
+      (raise-argument-error 'check= "non-empty-list" v*)]
+     [(null? (cdr v*))
+      (car v*)]
+     [(equal? (car v*) (cadr v*))
+      (loop (cdr v*))]
+     [else
+      #f])))
 
 ;; =============================================================================
 
