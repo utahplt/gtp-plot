@@ -37,6 +37,8 @@
     binomial)
   (only-in math/statistics
     mean)
+  (only-in racket/draw
+    make-color)
   (only-in racket/format
     ~r)
   (only-in racket/list
@@ -103,14 +105,19 @@
   (define pi* (if multi? (flatten pre-pi*) (list pre-pi*)))
   (define nt (or (check= (map performance-info->num-units pi*))
                  (raise-arguments-error 'exact-runtime-plot "incompatible performance-info structures" "pi*" pi*)))
+  (define size/num-units (num-units->point-size nt))
+  (define alpha/num-units (num-units->point-alpha nt))
   (define max-runtime (box 0))
   (define num-points (box 0))
+  (define color0 (*POINT-COLOR*))
   (define elem*
     (list
       (make-vrule* nt)
       (for/list ([pi (in-list pi*)]
-                 [color (in-naturals (*POINT-COLOR*))])
-        (parameterize ([*POINT-COLOR* color])
+                 [color (in-naturals color0)])
+        (parameterize ([*POINT-COLOR* color]
+                       [*POINT-SIZE* size/num-units]
+                       [*POINT-ALPHA* alpha/num-units])
           (for/fold ([acc '()])
                     ([cfg (in-configurations pi)])
             (define num-types (configuration-info->num-types cfg))
@@ -141,12 +148,17 @@
         #:y-label (and (*OVERHEAD-LABEL?*) "Time (ms)")
         #:width (*OVERHEAD-PLOT-WIDTH*)
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
-  (exact-add-legend (performance-info->name (car pi*)) (unbox num-points) body))
+  (define base-pict
+    (exact-add-legend (performance-info->name (car pi*)) (unbox num-points) body))
+  (if multi?
+    (add-color-legend base-pict (make-color-legend pi* color0))
+    base-pict))
 
 (define (overhead-plot pre-pi*)
   ;; TODO use standard-D
   (define multi? (pair? pre-pi*))
   (define pi* (if multi? (flatten pre-pi*) (list pre-pi*)))
+  (define color0 3)
   (define body (maybe-freeze
     (parameterize ([plot-x-ticks (make-overhead-x-ticks)]
                    [plot-x-transform log-transform]
@@ -160,7 +172,7 @@
       (plot-pict
         (list
           (for/list ([pi (in-list pi*)]
-                     [i (in-naturals 3)])
+                     [i (in-naturals color0)])
             (parameterize ([*OVERHEAD-LINE-COLOR* i])
               (make-count-configurations-function pi)))
           #;(if #f ;(*OVERHEAD-SHOW-RATIO*)
@@ -175,8 +187,12 @@
         #:y-label (and (*OVERHEAD-LABEL?*) "% Configs.")
         #:width (*OVERHEAD-PLOT-WIDTH*)
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
-  ;; TODO don't just use car
-  (overhead-add-legend (car pi*) body))
+  (define base-pict
+    ;; TODO don't just use car
+    (overhead-add-legend (car pi*) body))
+  (if multi?
+    (add-color-legend base-pict (make-color-legend pi* color0))
+    base-pict))
 
 (define (make-dot pi get-x)
   (define x-posn (get-x pi))
@@ -574,6 +590,22 @@
     (vl-append (*LEGEND-VSPACE*) top-left body)
     top-right))
 
+(define (add-color-legend pict legend)
+  (vr-append (*LEGEND-VSPACE*) pict legend))
+
+(define (make-color-legend pi* first-color)
+  (define HSPACE (*LEGEND-HSPACE*))
+  (define swatch-width (- (*FONT-SIZE*) 2))
+  (define swatch-height (- (*FONT-SIZE*) 2))
+  (for/fold ([acc (blank 0 0)])
+            ([pi (in-list pi*)]
+             [c (in-naturals first-color)])
+    (define lbl (text (symbol->string (performance-info->name pi)) '() (*FONT-SIZE*)))
+    (define color (filled-rectangle swatch-width swatch-height #:color (apply make-color (->pen-color c))))
+    (hc-append HSPACE
+      (hc-append 2 color lbl)
+      acc)))
+
 (define (title-text str [angle 0])
   (text str (cons 'bold TITLE-FACE) (*FONT-SIZE*) angle))
 
@@ -607,6 +639,20 @@
       (loop (cdr v*))]
      [else
       #f])))
+
+(define (num-units->point-size nu)
+  (cond
+   [(< nu 10)
+    6]
+   [else
+    (*POINT-SIZE*)]))
+
+(define (num-units->point-alpha nu)
+  (cond
+   [(< nu 10)
+    0.8]
+   [else
+    (*POINT-ALPHA*)]))
 
 ;; =============================================================================
 
