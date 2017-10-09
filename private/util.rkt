@@ -156,12 +156,21 @@
   (cons (- u offset) (+ u offset)))
 
 (define (log2 n)
-  (if (= n 1)
-    0
+  (cond
+   [(zero? n)
+    (raise-argument-error 'log2 "power-of-2" n)]
+   [(= n 1)
+    0]
+   [else
     (let loop ([k 1])
-      (if (= n (expt 2 k))
-        k
-        (loop (+ k 1))))))
+      (define k^ (expt 2 k))
+      (cond
+       [(= n k^)
+        k]
+       [(< n k^)
+        (raise-argument-error 'log2 "power-of-2" n)]
+       [else
+        (loop (+ k 1))]))]))
 
 (define (order-of-magnitude n)
   (let loop ([upper 10] [acc 0])
@@ -270,7 +279,16 @@
     (check-equal? (log2 1) 0)
     (check-equal? (log2 2) 1)
     (check-equal? (log2 8) 3)
-    (check-equal? (log2 4096) 12))
+    (check-equal? (log2 4096) 12)
+
+    (check-exn exn:fail:contract?
+      (λ () (log2 0)))
+    (check-exn exn:fail:contract?
+      (λ () (log2 3)))
+    (check-exn exn:fail:contract?
+      (λ () (log2 -1)))
+    (check-exn exn:fail:contract?
+      (λ () (log2 72))))
 
   (test-case "halve"
     (define (check-columnize x* n)
