@@ -73,9 +73,15 @@
      (define pi*
        (if (null? (cdr path-string*))
          (list (->performance-info (car path-string*)))
-         (for/list ([n (in-list path-string*)])
-           (with-handlers ([exn:fail? (λ (e) (printf "Error processing '~a', run 'raco ~a ~a' to debug.~n" n GTP-PLOT n))])
-             (->performance-info n)))))
+         (filter values
+           (for/list ([n (in-list path-string*)])
+             (with-handlers ([exn:fail?
+                              (λ (e)
+                                (define errmsg (format "Error processing '~a', run 'raco ~a ~a' to debug." n GTP-PLOT n))
+                                (if (*single-plot?*)
+                                  (raise-user-error 'gtp-plot errmsg)
+                                  (begin (displayln errmsg) #f)))])
+               (->performance-info n))))))
      (define render-one
        (case (*plot-type*)
         [(cloud) cloud-plot]
