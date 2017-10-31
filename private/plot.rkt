@@ -73,6 +73,7 @@
 (defparam *INTERVAL-ALPHA* 1 Nonnegative-Real)
 (defparam *LEGEND-HSPACE* 20 Pict-Units)
 (defparam *LEGEND-VSPACE* 10 Pict-Units)
+(defparam *LEGEND?* #true Boolean)
 (defparam *MAJOR-AXIS* 'X axis/c)
 (defparam *OVERHEAD-FONT-FACE* "bold" Font-Face)
 (defparam *OVERHEAD-FREEZE-BODY* #f boolean?)
@@ -150,7 +151,7 @@
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
   (define base-pict
     (exact-add-legend (performance-info->name (car pi*)) (unbox num-points) body))
-  (if multi?
+  (if (and multi? (*LEGEND?*))
     (add-color-legend base-pict (make-color-legend pi* color0))
     base-pict))
 
@@ -158,7 +159,7 @@
   ;; TODO use standard-D
   (define multi? (pair? pre-pi*))
   (define pi* (if multi? (flatten pre-pi*) (list pre-pi*)))
-  (define color0 3)
+  (define color0 (*OVERHEAD-LINE-COLOR*))
   (define body (maybe-freeze
     (parameterize ([plot-x-ticks (make-overhead-x-ticks)]
                    [plot-x-transform log-transform]
@@ -190,7 +191,7 @@
   (define base-pict
     ;; TODO don't just use car
     (overhead-add-legend (car pi*) body))
-  (if multi?
+  (if (and multi? (*LEGEND?*))
     (add-color-legend base-pict (make-color-legend pi* color0))
     base-pict))
 
