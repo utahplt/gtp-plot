@@ -24,6 +24,8 @@
 
 @title[#:tag "gtp-plotting"]{Plot}
 
+@defmodule[gtp-plot/plot]
+
 The examples in this section use the following context:
 
 @racketblock[
@@ -50,8 +52,6 @@ The examples in this section use the following context:
 @(define-syntax-rule (render-demo sexp)
    @list[@racketblock[sexp] sexp])
 
-
-@defmodule[gtp-plot/plot]
 
 For command-line options, run @exec{raco gtp-plot --help}.
 
@@ -112,11 +112,46 @@ The appearance of these plots is subject to change.
   @render-demo[(rectangle-plot mbta)]
 }
 
+@defproc[(grid-plot [make-plot (-> any/c pict?)] [data* (listof any/c)]) pict?]{
+  Build plots for a sequence of datasets and arrange the plots into a grid.
+
+  @render-demo[
+    (parameterize ([*FONT-SIZE* 8]
+                   [*GRID-NUM-COLUMNS* 2]
+                   [*GRID-Y* #f]
+                   [*OVERHEAD-PLOT-HEIGHT* 100]
+                   [*OVERHEAD-SHOW-RATIO* #f])
+      (grid-plot overhead-plot (list mbta mbta mbta)))]
+}
+
 
 @section{Plot Parameters}
 
 @defparam[*FONT-SIZE* font-size exact-positive-integer? #:value 10]{
   Controls font size of text in plots.
+}
+
+@defparam[*GRID-X* grid-x (or/c #f natural?) #:value 600]{
+  Controls the width of a @racket[grid-plot].
+  If @racket[#false], the width of the grid is at least @racket[(* (*GRID-NUM-COLUMNS*) (*OVERHEAD-PLOT-WIDTH*))].
+}
+
+@defparam[*GRID-Y* grid-y (or/c #f natural?) #:value 1300]{
+  Controls the height of a @racket[grid-plot].
+  If @racket[#false], the height of the grid is at least @racket[(* (quotient _N (*GRID-NUM-COLUMNS*)) (*OVERHEAD-PLOT-WIDTH*))],
+   where @racket[_N] is the number of plots in the grid.
+}
+
+@defparam[*GRID-X-SKIP* grid-x-skip natural? #:value 30]{
+  Horizontal space between plots on a @racket[grid-plot].
+}
+
+@defparam[*GRID-Y-SKIP* grid-y-skip natural? #:value 6]{
+  Vertical space between plots on a @racket[grid-plot].
+}
+
+@defparam[*GRID-NUM-COLUMNS* grid-num-columns exact-positive-integer? #:value 3]{
+  Number of columns on a @racket[grid-plot].
 }
 
 @defparam[*INTERVAL-ALPHA* ia nonnegative-real/c #:value 1]{

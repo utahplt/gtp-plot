@@ -23,6 +23,12 @@
 
     [validate-samples-plot
      (-> performance-info? pict?)]
+
+    [grid-plot
+     (parametric->/c [X]
+       (-> (-> X pict?)
+           (listof X)
+           pict?))]
 ))
 
 (require
@@ -74,6 +80,11 @@
 (defparam *LEGEND-HSPACE* 20 Pict-Units)
 (defparam *LEGEND-VSPACE* 10 Pict-Units)
 (defparam *LEGEND?* #true Boolean)
+(defparam *GRID-X* 600 Natural)
+(defparam *GRID-Y* 1300 Natural)
+(defparam *GRID-X-SKIP* 30 Natural)
+(defparam *GRID-Y-SKIP* 6 Natural)
+(defparam *GRID-NUM-COLUMNS* 3 Positive-Integer)
 (defparam *MAJOR-AXIS* 'X axis/c)
 (defparam *OVERHEAD-FONT-FACE* "bold" Font-Face)
 (defparam *OVERHEAD-FREEZE-BODY* #f boolean?)
@@ -101,6 +112,7 @@
 ;; -----------------------------------------------------------------------------
 
 (define (exact-runtime-plot pre-pi*)
+  (log-gtp-plot-info "rendering exact-runtime-plot for ~a" pre-pi*)
   ;; TODO use standard-D
   (define multi? (pair? pre-pi*))
   (define pi* (if multi? (flatten pre-pi*) (list pre-pi*)))
@@ -156,6 +168,7 @@
     base-pict))
 
 (define (overhead-plot pre-pi*)
+  (log-gtp-plot-info "rendering overhead-plot for ~a" pre-pi*)
   ;; TODO use standard-D
   (define multi? (pair? pre-pi*))
   (define pi* (if multi? (flatten pre-pi*) (list pre-pi*)))
@@ -207,6 +220,7 @@
     #:size (*RATIO-DOT-SIZE*)))
 
 (define (samples-plot si)
+  (log-gtp-plot-info "rendering samples-plot for ~a" si)
   ;; TODO use standard-D
   (define sample-size (sample-info->sample-size si))
   (define pi* (sample-info->performance-info* si))
@@ -245,6 +259,7 @@
   (samples-add-legend si sample-size (length pi*) body))
 
 (define (validate-samples-plot si)
+  (log-gtp-plot-info "rendering validate-samples-plot for ~a" si)
   ;; TODO use standard-D
   (define sample-size (sample-info->sample-size si))
   (define pi* (sample-info->performance-info* si))
@@ -276,6 +291,7 @@
   (samples-add-legend (performance-info->name si) sample-size (length pi*) body))
 
 (define (cloud-plot pi)
+  (log-gtp-plot-info "rendering cloud-plot for ~a" pi)
   (begin ;; TODO remove these checks
     (unless (eq? (*MAJOR-AXIS*) 'X)
       (raise-argument-error 'cloud-plot "(*MAJOR-AXIS*) = 'X" (*MAJOR-AXIS*)))
@@ -310,6 +326,7 @@
   (cloud-add-legend (performance-info->name pi) body))
 
 (define (rectangle-plot pi)
+  (log-gtp-plot-info "rendering rectangle-plot for ~a" pi)
   (define W (*OVERHEAD-PLOT-WIDTH*))
   (define H (*OVERHEAD-PLOT-HEIGHT*))
   (define RADIUS 5)
@@ -327,6 +344,31 @@
       W (* (/ num-D nc) H) RADIUS #:color COLOR #:border-color COLOR #:border-width LINE-WIDTH))
   (define shim (rectangle W (* 2 LINE-WIDTH) #:border-color COLOR #:border-width LINE-WIDTH))
   (lb-superimpose outer (lt-superimpose inner shim)))
+
+(define (grid-plot make-plot pi**)
+  (define num-plots (length pi**))
+  (log-gtp-plot-info "rendering grid-plot for ~a items" num-plots)
+  (define GRID-X (*GRID-X*))
+  (define GRID-Y (*GRID-Y*))
+  (define GRID-X-SKIP (*GRID-X-SKIP*))
+  (define GRID-Y-SKIP (*GRID-Y-SKIP*))
+  (define GRID-NUM-COLUMNS (*GRID-NUM-COLUMNS*))
+  (define plot-width
+    (if GRID-X
+      (/ (- GRID-X GRID-X-SKIP) GRID-NUM-COLUMNS)
+      (*OVERHEAD-PLOT-WIDTH*)))
+  (define plot-height
+    (if GRID-Y
+      (exact-floor (/ (+ GRID-Y GRID-Y-SKIP) num-plots))
+      (*OVERHEAD-PLOT-HEIGHT*)))
+  (define plot*
+    (parameterize ([*OVERHEAD-PLOT-HEIGHT* plot-height]
+                   [*OVERHEAD-PLOT-WIDTH* plot-width])
+      (map make-plot pi**)))
+  (define col*
+    (for/list ([p* (in-list (columnize plot* GRID-NUM-COLUMNS))])
+      (apply vl-append GRID-Y-SKIP p*)))
+  (apply ht-append GRID-X-SKIP col*))
 
 ;; -----------------------------------------------------------------------------
 
