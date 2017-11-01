@@ -185,10 +185,12 @@
                    [*INTERVAL-ALPHA* (if multi? 0.6 (*INTERVAL-ALPHA*))])
       (plot-pict
         (list
-          (for/list ([pi (in-list pi*)]
-                     [i (in-naturals color0)])
-            (parameterize ([*OVERHEAD-LINE-COLOR* i])
-              (make-count-configurations-function pi)))
+          (if (length=2 pi*)
+            (make-overlapping-intervals (car pi*) (cadr pi*))
+            (for/list ([pi (in-list pi*)]
+                       [i (in-naturals color0)])
+              (parameterize ([*OVERHEAD-LINE-COLOR* i])
+                (make-count-configurations-function pi))))
           #;(if #f ;(*OVERHEAD-SHOW-RATIO*)
             (make-dot pi typed/baseline-ratio)
             '())
@@ -441,22 +443,25 @@
       #:color c
       #:alpha (*POINT-ALPHA*))))
 
+(define (make-overlapping-intervals pi0 pi1)
+  (define color0 (*OVERHEAD-LINE-COLOR*))
+  (define color1 (+ color0 1))
+  (define f0 (cached (->deliverable-counter pi0)))
+  (define f1 (cached (->deliverable-counter pi1)))
+  (define (lo0 n) 0)
+  (define (lo1 n) 0)
+  (list
+    (parameterize ([*OVERHEAD-LINE-COLOR* color1])
+      (make-overhead-function-interval lo1 f1))
+    (parameterize ([*OVERHEAD-LINE-COLOR* color0])
+      (make-overhead-function-interval lo0 f0))
+    (parameterize ([*OVERHEAD-LINE-COLOR* color1])
+      (make-count-configurations-function f1 #:interval? #f))))
 
 (define (make-count-configurations-function pi #:interval? [ivl #t])
-  (define f (if (performance-info? pi) (make-deliverable-counter pi) pi))
+  (define f (->deliverable-counter pi))
   (if ivl
-    (function-interval
-      (λ (r) 0)
-      f
-      0 (*OVERHEAD-MAX*)
-      #:alpha (*INTERVAL-ALPHA*)
-      #:color (*OVERHEAD-LINE-COLOR*)
-      #:line1-color (*OVERHEAD-LINE-COLOR*)
-      #:line2-color (*OVERHEAD-LINE-COLOR*)
-      #:line1-width (*OVERHEAD-LINE-WIDTH*)
-      #:line2-width (*OVERHEAD-LINE-WIDTH*)
-      #:samples (*OVERHEAD-SAMPLES*)
-      #:style (*OVERHEAD-LINE-STYLE*))
+    (make-overhead-function-interval (λ (r) 0) f)
     (function
       f
       0 (*OVERHEAD-MAX*)
@@ -464,6 +469,17 @@
       #:width (*OVERHEAD-LINE-WIDTH*)
       #:samples (*OVERHEAD-SAMPLES*)
       #:style (*OVERHEAD-LINE-STYLE*))))
+
+(define (make-overhead-function-interval lo hi)
+  (function-interval lo hi
+    0 (*OVERHEAD-MAX*)
+    #:alpha (*INTERVAL-ALPHA*)
+    #:color (*OVERHEAD-LINE-COLOR*)
+    #:line1-style 'transparent
+    #:line2-color (*OVERHEAD-LINE-COLOR*)
+    #:line2-width (*OVERHEAD-LINE-WIDTH*)
+    #:line2-style (*OVERHEAD-LINE-STYLE*)
+    #:samples (*OVERHEAD-SAMPLES*)))
 
 ;; make-simple-deliverable-counter : (-> performance-info? (-> real? natural?))
 ;; Specification for `make-deliverable-counter`
@@ -517,12 +533,11 @@
     0 (*OVERHEAD-MAX*)
     #:alpha (*INTERVAL-ALPHA*)
     #:color (*OVERHEAD-LINE-COLOR*)
-    #:line1-color (*OVERHEAD-LINE-COLOR*)
-    #:line1-width (*OVERHEAD-LINE-WIDTH*)
+    #:line1-style 'transparent
     #:line2-color (*OVERHEAD-LINE-COLOR*)
     #:line2-width (*OVERHEAD-LINE-WIDTH*)
+    #:line2-style 'solid
     #:samples (*OVERHEAD-SAMPLES*)
-    #:style 'solid
     #:label #f))
 
 (define (lower-confidence n*)
@@ -538,6 +553,20 @@
      [(98) 2.326]
      [else (error 'error-bounds "Unknown confidence level '~a'" (*CONFIDENCE-LEVEL*))]))
   (confidence-offset n* #:cv cv))
+
+(define (cached f)
+  (define cache (make-hasheqv))
+  (λ (n)
+    (or (hash-ref cache n #f)
+        (let ([fn (f n)])
+          (hash-set! cache n fn)
+          fn))))
+
+;; ??? idk but using this 3 times
+(define (->deliverable-counter x)
+  (if (performance-info? x)
+    (make-deliverable-counter x)
+    x))
 
 (define (make-overhead-x-ticks [extra-xticks '()])
   (define MAJOR-TICKS
@@ -697,6 +726,11 @@
    [else
     (*POINT-ALPHA*)]))
 
+(define (length=2 x*)
+  (and (not (null? x*))
+       (not (null? (cdr x*)))
+       (null? (cddr x*))))
+
 ;; =============================================================================
 
 
@@ -746,4 +780,10 @@
 
   #;(test-case "validate-samples-plot"
     (check-true (pict? (validate-samples-plot espionage))))
+
+  (test-case "length=2"
+    (check-true (length=2 '(A B)))
+    (check-false (length=2 '()))
+    (check-false (length=2 '(A)))
+    (check-false (length=2 '(A A A))))
 )
