@@ -1,7 +1,7 @@
 #lang info
 (define collection "gtp-plot")
-(define deps '("base" "scribble-abbrevs" "scribble-lib" "math-lib" "pict-lib" "plot-lib" "reprovide-lang"))
-(define build-deps '("rackunit-lib" "racket-doc" "scribble-doc" "pict-doc" "rackunit-abbrevs" "typed-racket-doc"))
+(define deps '("base" "draw-lib" "scribble-abbrevs" "scribble-lib" "math-lib" "pict-lib" "plot-lib" "reprovide-lang"))
+(define build-deps '("rackunit-lib" "racket-doc" "scribble-doc" "pict-doc" "plot-doc" "rackunit-abbrevs" "typed-racket-doc"))
 (define pkg-desc "For plotting gradual typing performance data")
 (define version "0.0")
 (define pkg-authors '(ben))
