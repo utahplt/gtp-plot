@@ -15,7 +15,7 @@
 
   (contract-out
     [confidence-interval
-     (-> (listof nonnegative-real/c) #:cv nonnegative-real/c (cons/c real? nonnegative-real/c))]
+     (-> (listof nonnegative-real/c) #:cv nonnegative-real/c (cons/c real? real?))]
 
     [confidence-offset
      (-> (listof nonnegative-real/c) #:cv nonnegative-real/c nonnegative-real/c)]
@@ -151,7 +151,7 @@
     cv-offset))
 
 (define (confidence-interval x* #:cv [cv 1.96])
-  (define offset (confidence-interval x* #:cv cv))
+  (define offset (confidence-offset x* #:cv cv))
   (define u (mean x*))
   (cons (- u offset) (+ u offset)))
 
@@ -229,7 +229,17 @@
 ;; =============================================================================
 
 (module+ test
-  (require rackunit rackunit-abbrevs)
+  (require rackunit rackunit-abbrevs (only-in pict blank))
+
+  (define CI? (equal? "true" (getenv "CI")))
+  (define temp-dir (find-system-path 'temp-dir))
+
+  (define (make-fresh-filename)
+    (let loop ((s (gensym)))
+      (define p (build-path temp-dir (symbol->string s)))
+      (if (or (directory-exists? p) (file-exists? p))
+        (loop (gensym))
+        p)))
 
   (test-case "nonnegative-real/c"
     (check-pred nonnegative-real/c 0)
@@ -241,9 +251,23 @@
     (check-false (nonnegative-real/c -1))
     (check-false (nonnegative-real/c -0.00099)))
 
-  (test-case "path-string->string"
-    (check-equal? (path-string->string "hi") "hi")
-    (check-equal? (path-string->string (string->path "hi")) "hi"))
+  (test-case "confidence-interval"
+    (define n* '(1 2 2 2 2 2 3))
+    (define ivl (confidence-interval n* #:cv 0.95))
+    (check < 1 (car ivl))
+    (check < (car ivl) 2)
+    (check < 2 (cdr ivl))
+    (check < (cdr ivl) 3))
+
+  (test-case "confidence-offset"
+    (let ([n* '(1 1 1 1)])
+      (define offset (confidence-offset n* #:cv 0.95))
+      (check-equal? offset 0))
+
+    (let ([n* '(1 2 3)])
+      (define offset (confidence-offset n* #:cv 0.5))
+      (check < 0 offset)
+      (check < offset 1)))
 
   (test-case "tab-split"
     (check-equal? (tab-split "hello") '("hello"))
@@ -257,6 +281,22 @@
      ['("a" "b" "c")
       ==> "a\tb\tc"]))
 
+  (test-case "path-string->string"
+    (check-equal? (path-string->string "hi") "hi")
+    (check-equal? (path-string->string (string->path "hi")) "hi"))
+
+  (test-case "ensure-directory"
+    (unless CI?
+      (define temp-dir (find-system-path 'temp-dir))
+      (define fresh-dirname
+        (make-fresh-filename))
+      (check-false (directory-exists? fresh-dirname))
+      (ensure-directory fresh-dirname)
+      (check-pred directory-exists? fresh-dirname)
+      (ensure-directory fresh-dirname)
+      (check-pred directory-exists? fresh-dirname)
+      (delete-directory fresh-dirname)))
+
   (test-case "rnd"
     (check-equal? (rnd 2) "2.00")
     (check-equal? (rnd 1/3) "0.33"))
@@ -264,16 +304,6 @@
   (test-case "pct"
     (check-equal? (pct 1 2) 50)
     (check-equal? (rnd (pct 1 3)) "33.33"))
-
-  (test-case "string-last-index-of"
-    (check-equal? (string-last-index-of "hello" #\h) 0)
-    (check-equal? (string-last-index-of "hello" #\o) 4)
-    (check-equal? (string-last-index-of "hello" #\l) 3)
-    (check-equal? (string-last-index-of "hello" #\Q) #f))
-
-  (test-case "file-remove-extension"
-    (check-equal? (file-remove-extension "foo_tab.gz") "foo.tab")
-    (check-equal? (file-remove-extension "a_b.c") "a.b"))
 
   (test-case "log2"
     (check-equal? (log2 1) 0)
@@ -290,7 +320,41 @@
     (check-exn exn:fail:contract?
       (λ () (log2 72))))
 
-  (test-case "halve"
+  (test-case "order-of-magnitude"
+    (check-apply* order-of-magnitude
+     [0
+      ==> 0]
+     [1
+      ==> 0]
+     [5
+      ==> 0]
+     [9
+      ==> 0]
+     [10
+      ==> 1]
+     [12.34
+      ==> 1]
+     [999
+      ==> 2]
+     [999.99999
+      ==> 2]
+     [1032
+      ==> 3]))
+
+  (test-case "file-remove-extension"
+    (check-equal? (file-remove-extension "foo_tab.gz") "foo.tab")
+    (check-equal? (file-remove-extension "a_b.c") "a.b"))
+
+  (test-case "save-pict"
+    (unless CI?
+      (define fname (make-fresh-filename))
+      (define p (blank 10 10))
+      (check-false (file-exists? fname))
+      (check-true (save-pict fname p))
+      (check-pred file-exists? fname)
+      (delete-file fname)))
+
+  (test-case "columnize"
     (define (check-columnize x* n)
       (define y** (columnize x* n))
       (define L (length (car y**)))
@@ -333,25 +397,10 @@
      ["0000000010"
       ==> 9]))
 
-  (test-case "order-of-magnitude"
-    (check-apply* order-of-magnitude
-     [0
-      ==> 0]
-     [1
-      ==> 0]
-     [5
-      ==> 0]
-     [9
-      ==> 0]
-     [10
-      ==> 1]
-     [12.34
-      ==> 1]
-     [999
-      ==> 2]
-     [999.99999
-      ==> 2]
-     [1032
-      ==> 3]))
+  (test-case "string-last-index-of"
+    (check-equal? (string-last-index-of "hello" #\h) 0)
+    (check-equal? (string-last-index-of "hello" #\o) 4)
+    (check-equal? (string-last-index-of "hello" #\l) 3)
+    (check-equal? (string-last-index-of "hello" #\Q) #f))
 
 )
