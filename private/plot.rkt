@@ -163,9 +163,11 @@
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
   (define base-pict
     (exact-add-legend (performance-info->name (car pi*)) (unbox num-points) body))
-  (if (and multi? (*LEGEND?*))
-    (add-color-legend base-pict (make-color-legend pi* color0))
-    base-pict))
+  (begin0
+    (if (and multi? (*LEGEND?*))
+      (add-color-legend base-pict (make-color-legend pi* color0))
+      base-pict)
+    (log-gtp-plot-info "rendering complete")))
 
 (define (overhead-plot pre-pi*)
   (log-gtp-plot-info "rendering overhead-plot for ~a" pre-pi*)
@@ -206,9 +208,11 @@
   (define base-pict
     ;; TODO don't just use car
     (overhead-add-legend (car pi*) body))
-  (if (and multi? (*LEGEND?*))
-    (add-color-legend base-pict (make-color-legend pi* color0))
-    base-pict))
+  (begin0
+    (if (and multi? (*LEGEND?*))
+      (add-color-legend base-pict (make-color-legend pi* color0))
+      base-pict)
+    (log-gtp-plot-info "rendering finished")))
 
 (define (make-dot pi get-x)
   (define x-posn (get-x pi))
@@ -258,7 +262,9 @@
         #:y-label (and (*OVERHEAD-LABEL?*) "% Configs.")
         #:width (*OVERHEAD-PLOT-WIDTH*)
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
-  (samples-add-legend si sample-size (length pi*) body))
+  (begin0
+    (samples-add-legend si sample-size (length pi*) body)
+    (log-gtp-plot-info "rendering finished")))
 
 (define (validate-samples-plot si)
   (log-gtp-plot-info "rendering validate-samples-plot for ~a" si)
@@ -290,7 +296,9 @@
         #:y-label (and (*OVERHEAD-LABEL?*) "% Configs.")
         #:width (*OVERHEAD-PLOT-WIDTH*)
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
-  (samples-add-legend (performance-info->name si) sample-size (length pi*) body))
+  (begin0
+    (samples-add-legend (performance-info->name si) sample-size (length pi*) body)
+    (log-gtp-plot-info "rendering finished")))
 
 (define (cloud-plot pi)
   (log-gtp-plot-info "rendering cloud-plot for ~a" pi)
@@ -325,7 +333,9 @@
         #:y-label #f #;(and (*OVERHEAD-LABEL?*) "Time (ms)")
         #:width (*OVERHEAD-PLOT-WIDTH*)
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
-  (cloud-add-legend (performance-info->name pi) body))
+  (begin0
+    (cloud-add-legend (performance-info->name pi) body)
+    (log-gtp-plot-info "rendering finished")))
 
 (define (rectangle-plot pi)
   (log-gtp-plot-info "rendering rectangle-plot for ~a" pi)
@@ -345,7 +355,9 @@
     (filled-rounded-rectangle
       W (* (/ num-D nc) H) RADIUS #:color COLOR #:border-color COLOR #:border-width LINE-WIDTH))
   (define shim (rectangle W (* 2 LINE-WIDTH) #:border-color COLOR #:border-width LINE-WIDTH))
-  (lb-superimpose outer (lt-superimpose inner shim)))
+  (begin0
+    (lb-superimpose outer (lt-superimpose inner shim))
+    (log-gtp-plot-info "rendering finished")))
 
 (define (grid-plot make-plot pi**)
   (define num-plots (length pi**))
@@ -370,7 +382,9 @@
   (define col*
     (for/list ([p* (in-list (columnize plot* GRID-NUM-COLUMNS))])
       (apply vl-append GRID-Y-SKIP p*)))
-  (apply ht-append GRID-X-SKIP col*))
+  (begin0
+    (apply ht-append GRID-X-SKIP col*)
+    (log-gtp-plot-info "rendering finished")))
 
 ;; -----------------------------------------------------------------------------
 
