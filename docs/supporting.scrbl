@@ -2,6 +2,7 @@
 
 @require[
   (for-label
+    pict
     gtp-plot/system
     gtp-plot/util
     racket/base
