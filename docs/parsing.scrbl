@@ -116,7 +116,7 @@
 }
 
 @defproc[(make-reticulated-info [ps reticulated-data?]) reticulated-info?]{
-  Build a @tech{performance info} structure from a Typed Racket dataset.
+  Build a @tech{performance info} structure from a Reticulated dataset.
 }
 
 @defproc[(reticulated-info? [x any/c]) boolean?]{
