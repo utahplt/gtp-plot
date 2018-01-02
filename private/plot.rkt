@@ -12,8 +12,14 @@
     [overhead-plot
      (-> (treeof performance-info?) pict?)]
 
+    [discrete-overhead-plot
+     (-> performance-info? (listof real?) pict?)]
+
     [samples-plot
      (-> performance-info? pict?)]
+
+    #;[discrete-samples-plot
+     (-> performance-info? (listof real?) pict?)]
 
     [exact-runtime-plot
      (-> (treeof performance-info?) pict?)]
@@ -41,6 +47,8 @@
   plot/utils
   (only-in math/number-theory
     binomial)
+  (only-in math/base
+    euler.0)
   (only-in math/statistics
     mean)
   (only-in racket/draw
@@ -69,6 +77,7 @@
   (begin (define id (make-parameter val))
          (provide id)))
 
+(defparam *BAR-WIDTH* 0.1 Real)
 (defparam *CACHE-SIZE* (expt 2 16) Natural) ;; max num. configs to store in memory
 (defparam *CONFIDENCE-LEVEL* 95 Percent)
 (defparam *CONFIGURATION-X-JITTER* 0.4 Real)
@@ -108,6 +117,7 @@
 (defparam *RECTANGLE-BORDER-COLOR* "black" Color)
 (defparam *SAMPLE-COLOR* "chocolate" Color)
 (defparam *STANDARD-D* #f (or/c #f positive?))
+(defparam *TICK-GRID?* #true boolean?)
 (defparam *TYPED/UNTYPED-RATIO-XTICK?* #f Boolean)
 
 ;; -----------------------------------------------------------------------------
@@ -202,7 +212,7 @@
         #:x-max (*OVERHEAD-MAX*)
         #:y-min 0
         #:y-max 100
-        #:x-label (and (*OVERHEAD-LABEL?*) "Overhead (vs. retic-untyped)")
+        #:x-label (and (*OVERHEAD-LABEL?*) "Overhead")
         #:y-label (and (*OVERHEAD-LABEL?*) "% Configs.")
         #:width (*OVERHEAD-PLOT-WIDTH*)
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
@@ -212,6 +222,39 @@
   (begin0
     (if (and multi? (*LEGEND?*))
       (add-color-legend base-pict (make-color-legend pi* color0))
+      base-pict)
+    (log-gtp-plot-info "rendering finished")))
+
+(define (discrete-overhead-plot pi D*)
+  (log-gtp-plot-info "rendering discrete-overhead-plot for ~a at ~a" pi D*)
+  (define body (maybe-freeze
+    (parameterize ([plot-x-ticks (make-overhead-x-ticks)]
+                   [plot-x-transform log-transform]
+                   [plot-y-ticks (make-overhead-y-ticks)]
+                   [plot-x-far-ticks no-ticks]
+                   [plot-y-far-ticks no-ticks]
+                   [plot-tick-size TICK-SIZE]
+                   [plot-font-face (*OVERHEAD-FONT-FACE*)]
+                   [plot-font-size (*FONT-SIZE*)])
+      (plot-pict
+        (list-if
+          (let ([get-Y (make-simple-deliverable-counter pi)])
+            (for/list ([D (in-list D*)])
+              (make-overhead-bar D (get-Y D))))
+          (and (*TICK-GRID?*) (tick-grid)))
+        #:x-min 1
+        #:x-max (*OVERHEAD-MAX*)
+        #:y-min 0
+        #:y-max 100
+        #:x-label (and (*OVERHEAD-LABEL?*) "Overhead")
+        #:y-label (and (*OVERHEAD-LABEL?*) "% Configs.")
+        #:width (*OVERHEAD-PLOT-WIDTH*)
+        #:height (*OVERHEAD-PLOT-HEIGHT*)))))
+  (define base-pict
+    (overhead-add-legend pi body))
+  (begin0
+    (if (*LEGEND?*)
+      (add-color-legend base-pict (make-color-legend (list pi) (*OVERHEAD-LINE-COLOR*)))
       base-pict)
     (log-gtp-plot-info "rendering finished")))
 
@@ -259,13 +302,16 @@
         #:x-max (*OVERHEAD-MAX*)
         #:y-min 0
         #:y-max 100
-        #:x-label (and (*OVERHEAD-LABEL?*) "Overhead (vs. retic-untyped)")
+        #:x-label (and (*OVERHEAD-LABEL?*) "Overhead")
         #:y-label (and (*OVERHEAD-LABEL?*) "% Configs.")
         #:width (*OVERHEAD-PLOT-WIDTH*)
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
   (begin0
     (samples-add-legend si sample-size (length pi*) body)
     (log-gtp-plot-info "rendering finished")))
+
+(define (discrete-samples-plot pi D*)
+  (discrete-overhead-plot pi D*))
 
 (define (validate-samples-plot si)
   (log-gtp-plot-info "rendering validate-samples-plot for ~a" si)
@@ -293,7 +339,7 @@
         #:x-max (*OVERHEAD-MAX*)
         #:y-min 0
         #:y-max 100
-        #:x-label (and (*OVERHEAD-LABEL?*) "Overhead (vs. retic-untyped)")
+        #:x-label (and (*OVERHEAD-LABEL?*) "Overhead")
         #:y-label (and (*OVERHEAD-LABEL?*) "% Configs.")
         #:width (*OVERHEAD-PLOT-WIDTH*)
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
@@ -398,7 +444,7 @@
 
 (define (configuration-points p**)
   (points p**
-    #:color (*POINT-COLOR*)
+    #:color ((*COLOR-CONVERTER*) (*POINT-COLOR*))
     #:alpha (*POINT-ALPHA*)
     #:sym (*POINT-SYMBOL*)
     #:size (*POINT-SIZE*)))
@@ -554,6 +600,16 @@
     #:line2-style 'solid
     #:samples (*OVERHEAD-SAMPLES*)
     #:label #f))
+
+(define (make-overhead-bar x-mid y-hi)
+  (define y-lo 0)
+  (define-values [x-lo x-hi] (get-log-scaled-bounds x-mid (*BAR-WIDTH*)))
+  (rectangles (list (vector (ivl x-lo x-hi) (ivl y-lo y-hi)))))
+
+(define (get-log-scaled-bounds x-mid epsilon)
+  (define l2 (log x-mid))
+  (values (expt euler.0 (- l2 epsilon))
+          (expt euler.0 (+ l2 epsilon))))
 
 (define (lower-confidence n*)
   (- (mean n*) (error-bound n*)))
@@ -745,6 +801,9 @@
   (and (not (null? x*))
        (not (null? (cdr x*)))
        (null? (cddr x*))))
+
+(define (list-if . v*)
+  (filter values v*))
 
 ;; =============================================================================
 

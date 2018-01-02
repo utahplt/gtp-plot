@@ -103,6 +103,13 @@ The appearance of these plots is subject to change.
   @render-demo[(cloud-plot mbta)]
 }
 
+@defproc[(discrete-overhead-plot [pi performance-info?] [D* (listof nonnegative-real/c)]) pict?]{
+  Plots a histogram of the number of @math{D}-deliverable configurations for
+   each @math{D} in the given list.
+
+  @render-demo[(discrete-overhead-plot mbta '(1.2 4 10))]
+}
+
 @defproc[(rectangle-plot [pi performance-info?]) pict?]{
   Plots a thermometer showing the proportion of configurations that run
    within @math{D}x overhead, where @math{D} is the value of @racket[(*STANDARD-D*)].
@@ -126,6 +133,10 @@ The appearance of these plots is subject to change.
 
 
 @section{Plot Parameters}
+
+@defparam[*BAR-WIDTH* bar-width nonnegative-real/c #:value 0.1]{
+  Controls width of bars in a @racket[discrete-overhead-plot].
+}
 
 @defparam[*FONT-SIZE* font-size exact-positive-integer? #:value 10]{
   Controls font size of text in plots.
