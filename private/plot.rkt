@@ -84,7 +84,8 @@
 (defparam *CLOUD-COLOR-WHEEL* '("skyblue" "slategray" "darkslateblue" "black") (listof plot-color/c))
 (defparam *CLOUD-MIN-ALIGN* 'center anchor/c)
 (defparam *CLOUD-MAX-ALIGN* 'center anchor/c)
-(defparam *COLOR-CONVERTER* values (-> Natural Plot-Color))
+(defparam *BRUSH-COLOR-CONVERTER* values (-> Natural Plot-Color))
+(defparam *PEN-COLOR-CONVERTER* values (-> Natural Plot-Color))
 (defparam *FONT-SIZE* 10 Natural)
 (defparam *INTERVAL-ALPHA* 1 Nonnegative-Real)
 (defparam *LEGEND-HSPACE* 20 Pict-Units)
@@ -444,7 +445,7 @@
 
 (define (configuration-points p**)
   (points p**
-    #:color ((*COLOR-CONVERTER*) (*POINT-COLOR*))
+    #:color ((*BRUSH-COLOR-CONVERTER*) (*POINT-COLOR*))
     #:alpha (*POINT-ALPHA*)
     #:sym (*POINT-SYMBOL*)
     #:size (*POINT-SIZE*)))
@@ -526,7 +527,7 @@
     (function
       f
       0 (*OVERHEAD-MAX*)
-      #:color ((*COLOR-CONVERTER*) (*OVERHEAD-LINE-COLOR*))
+      #:color ((*PEN-COLOR-CONVERTER*) (*OVERHEAD-LINE-COLOR*))
       #:width (*OVERHEAD-LINE-WIDTH*)
       #:samples (*OVERHEAD-SAMPLES*)
       #:style (*OVERHEAD-LINE-STYLE*))))
@@ -535,9 +536,9 @@
   (function-interval lo hi
     0 (*OVERHEAD-MAX*)
     #:alpha (*INTERVAL-ALPHA*)
-    #:color ((*COLOR-CONVERTER*) (*OVERHEAD-LINE-COLOR*))
+    #:color ((*BRUSH-COLOR-CONVERTER*) (*OVERHEAD-LINE-COLOR*))
     #:line1-style 'transparent
-    #:line2-color ((*COLOR-CONVERTER*) (*OVERHEAD-LINE-COLOR*))
+    #:line2-color ((*PEN-COLOR-CONVERTER*) (*OVERHEAD-LINE-COLOR*))
     #:line2-width (*OVERHEAD-LINE-WIDTH*)
     #:line2-style (*OVERHEAD-LINE-STYLE*)
     #:samples (*OVERHEAD-SAMPLES*)))
