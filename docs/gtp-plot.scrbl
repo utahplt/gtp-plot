@@ -92,10 +92,10 @@ The data must be in one of the built-in data formats.
 (These aren't definitions, these are examples.)
 
 A @deftech{typeable component} in Typed Racket is a module.
-A typeable component in Reticulated is a function @tt{def} or a @tt|{@fields}| annotation for a class.
+A typeable component in Reticulated is a function parameter, function return, or class field (see @tt{def} and @tt|{@fields}|).
 
 A @deftech{configuration} is a gradually-typed program.
-Given a fully-typed program with @racket[_N] type annotations,
+Given a fully-typed program with @racket[_N] @tech{typeable components},
  there are @racket[(expt 2 _N)] configurations that have fewer annotations
  than the fully-typed configuration.
 
