@@ -5,6 +5,7 @@
     pict
     gtp-plot/system
     gtp-plot/util
+    (only-in gtp-util)
     racket/base
     racket/contract
     (only-in racket/math natural?)
@@ -17,6 +18,8 @@
 @defmodule[gtp-plot/system]{
   Convenience API for making system calls.
 }
+
+@deprecated[@racketmodname[gtp-util]]
 
 See also @racketmodname[racket/system].
 
@@ -33,6 +36,23 @@ See also @racketmodname[racket/system].
 
 @section[#:tag "gtp-util"]{Other Helper Functions}
 @defmodule[gtp-plot/util]
+
+@deftogether[(
+  @defidform[gtp-plot-logger]
+  @defidform[log-gtp-plot-debug]
+  @defidform[log-gtp-plot-info]
+  @defidform[log-gtp-plot-warning]
+  @defidform[log-gtp-plot-error]
+  @defidform[log-gtp-plot-fatal]
+)]{
+  Subscribe to @tt{gtp-logger} for diagnostics.
+
+  See also: @racket[define-logger].
+}
+
+@deprecated[#:what "sequence of bindings from here down" @racketmodname[gtp-util]]{
+  Keep using @racketmodname[gtp-plot/util] for the logger above.
+}
 
 @defproc[(nonnegative-real/c [x any/c]) boolean?]{
   Flat contract for non-negative real numbers.
@@ -106,18 +126,5 @@ See also @racketmodname[racket/system].
 @defproc[(count-zero-bits [str string?]) natural?]{
   Count the number of @racket[#\0] characters in a string of @racket{1} and
    @racket{0} digits.
-}
-
-@deftogether[(
-  @defidform[gtp-plot-logger]
-  @defidform[log-gtp-plot-debug]
-  @defidform[log-gtp-plot-info]
-  @defidform[log-gtp-plot-warning]
-  @defidform[log-gtp-plot-error]
-  @defidform[log-gtp-plot-fatal]
-)]{
-  Subscribe to @tt{gtp-logger} for diagnostics.
-
-  See also: @racket[define-logger].
 }
 
