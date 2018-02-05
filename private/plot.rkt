@@ -741,14 +741,15 @@
   (define HSPACE (*LEGEND-HSPACE*))
   (define swatch-width (- (*FONT-SIZE*) 2))
   (define swatch-height (- (*FONT-SIZE*) 2))
+  (define name* (performance-info*->unique-name* pi*))
   (for/fold ([acc (blank 0 0)])
-            ([pi (in-list pi*)]
+            ([name (in-list name*)]
              [c (in-naturals first-color)])
-    (define lbl (text (symbol->string (performance-info->name pi)) '() (*FONT-SIZE*)))
+    (define lbl (text name '() (*FONT-SIZE*)))
     (define color (filled-rectangle swatch-width swatch-height #:color (apply make-color (->pen-color c))))
     (hc-append HSPACE
-      (hc-append 2 color lbl)
-      acc)))
+      acc
+      (hc-append 2 color lbl))))
 
 (define (title-text str [angle 0])
   (text str (cons 'bold TITLE-FACE) (*FONT-SIZE*) angle))

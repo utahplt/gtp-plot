@@ -52,6 +52,9 @@
    [performance-info-update-src
     (-> performance-info? path-string? performance-info?)]
 
+   [performance-info*->unique-name*
+    (-> (listof performance-info?) (unique-listof string?))]
+
    [in-configurations
     (-> performance-info? (sequence/c configuration-info?))]
 
@@ -119,10 +122,21 @@
 (require
   gtp-plot/configuration-info
   gtp-plot/util
+  (only-in racket/list
+    group-by
+    remove-duplicates)
   (only-in racket/sequence
     sequence/c)
   (only-in racket/math
     natural?))
+
+(define (unique-listof ctc)
+  (and/c (listof ctc)
+         no-duplicates?))
+
+(define (no-duplicates? x*)
+  (= (length x*)
+     (length (remove-duplicates x*))))
 
 ;; =============================================================================
 
@@ -180,6 +194,14 @@
                     (performance-info->untyped-runtime pi)
                     (performance-info->typed-runtime pi)
                     (performance-info-make-in-configurations pi)))
+
+(define (performance-info*->unique-name* pi*)
+  (define base-name* (map performance-info->name pi*))
+  (if (no-duplicates? base-name*)
+    (map symbol->string base-name*)
+    (for/list ([bn (in-list base-name*)]
+               [i (in-naturals)])
+      (format "~a (~a)" bn i))))
 
 (define (in-configurations pi) ;; awkward implementation, but ok API
   ((performance-info-make-in-configurations pi) pi))
