@@ -28,6 +28,11 @@
      where @filepath{NAME} is the name of the program
      and @filepath{vX} is a Racket version number,
      and @filepath{OTHER} is any string (used to distinguish this data from other data with the same prefix).
+
+    @bold{or} lives in a file with any name where the first non-whitespace
+     characters on the first non-blank-line, non-comment
+     line are the @litchar{#(} characters.
+
   }
   @item{
     contains a Racket vector with @racket[(expt 2 _N)] elements (for some natural @racket[_N]);

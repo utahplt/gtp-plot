@@ -13,7 +13,11 @@
 (require
   gtp-plot/configuration-info
   gtp-plot/performance-info
-  gtp-plot/util
+  gtp-util
+  (only-in gtp-plot/util
+    path->name)
+  (only-in racket/string
+    string-prefix?)
   (only-in math/statistics
     mean)
   (only-in racket/file
@@ -28,10 +32,21 @@
      (fprintf port "#<typed-racket-info:~a>" (performance-info->name v)))])
 
 (define (typed-racket-data? path)
-  (and (path-string? path) (parse-typed-racket-filename path)))
+  (and (path-string? path)
+       (or (parse-typed-racket-filename path)
+           (looks-like-typed-racket-data path))))
+
+(define (looks-like-typed-racket-data path)
+  (with-input-from-file path
+    (lambda ()
+      (for/first ((ln (in-lines))
+                  #:when (and (not (whitespace-string? ln))
+                              (not (simple-comment-string? ln))))
+        (string-prefix? ln "#(")))))
 
 (define (make-typed-racket-info path)
-  (define bm-name (parse-typed-racket-filename path))
+  (define bm-name (or (parse-typed-racket-filename path)
+                      (path->name path)))
   (define v (file->value path))
   (define nc (vector-length v))
   (define nu (log2 nc))
@@ -71,7 +86,7 @@
           #f]
          [else
           (set-box! curr (+ i 1))
-          (define cfg (natural->bitstring i #:pad num-units))
+          (define cfg (natural->bitstring i #:bits num-units))
           (define num-types (count-hi-bits cfg))
           (define t* (vector-ref v i))
           (configuration-info cfg num-types t*)]))))

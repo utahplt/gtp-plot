@@ -32,6 +32,9 @@
      (-> path-string? string?)]
     ;; Convert a string or a path to a string
 
+    [path->name
+      (-> path-string? string?)]
+
     [ensure-directory
      (-> path-string? void?)]
     ;; If given directory exists, do nothing. Else create it.
@@ -90,6 +93,8 @@
   (only-in pict
     pict?
     pict->bitmap)
+  (only-in racket/path
+    file-name-from-path)
   (only-in racket/set
     set-union
     list->set)
@@ -116,6 +121,12 @@
 
 (define (path-string->string ps)
   (if (string? ps) ps (path->string ps)))
+
+(define (path-remove-extension po)
+  (path-replace-extension po #""))
+
+(define (path->name ps)
+  (path->string (path-remove-extension (file-name-from-path ps))))
 
 (define (rnd n)
   (~r n #:precision '(= 2)))
