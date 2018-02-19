@@ -56,6 +56,7 @@
     (string->symbol bm-name)
     path
     nu
+    nc
     rr
     rr
     tr
@@ -187,7 +188,11 @@
       12632/13269)
     (check-equal?
       (untyped/baseline-ratio M)
-      1))
+      1)
+    (let* ([n-1? (lambda (cfg) (= (configuration-info->num-types cfg) (sub1 (performance-info->num-units M))))]
+           [M% (filter-performance-info M n-1?)]
+           [cfg* (for/list ((x (in-configurations M%))) x)])
+      (check-equal? (length cfg*) (performance-info->num-units M))))
 
   (test-case "gregor"
     (define G (make-typed-racket-info gregor-file))

@@ -77,6 +77,7 @@
       (string->symbol name)
       UNDEFINED-SRC
       num-units
+      (expt num-units 2)
       baseline-runtime
       untyped-runtime
       typed-runtime
@@ -103,6 +104,7 @@
     (string->symbol name)
     data-path
     num-units
+    num-configs
     baseline-runtime
     untyped-runtime
     typed-runtime

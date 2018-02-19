@@ -2,6 +2,7 @@
 
 @require[
   gtp-plot/configuration-info
+  scribble/example
   (for-label
     gtp-plot/configuration-info
     gtp-plot/performance-info
@@ -131,9 +132,37 @@
   Getter functions.
 }
 
+@deftogether[(
+  @defproc[(performance-update-name [pi performance-info?]) performance-info?]
+  @defproc[(performance-update-src [pi performance-info?]) performance-info?]
+)]{
+  Copy-and-update functions.
+}
+
 @defproc[(performance-info->num-configurations [pi performance-info?]) natural?]{
   Return the number of configurations in the program.
   Same as @racket[(expt 2 (performance-info->num-units _pi))].
+}
+
+@defproc[(filter-performance-info [pi performance-info?] [keep-cfg? (-> configuration-info? any/c)]) performance-info?]{
+  Returns a @racket[performance-info] structure with all configurations @racket[_cfg] in @racket[pi]
+   such that @racket[(keep-cfg? _cfg)] is not @racket[#false].
+  Additionally the new performance info will have a different name and source
+   than @racket[pi].
+
+  @codeblock{
+    #lang racket/base
+    (require
+      gtp-plot/configuration-info
+      gtp-plot/performance-info)
+    ;; Keep fully-typed configurations, and 'fully-typed but for 1-2 units'
+    (define (keep-nearly-typed-configs pi)
+      (define max-types (performance-info->num-units pi))
+      (define min-types (max (- max-types 2) 0))
+      (define (nearly-typed? cfg)
+        (<= min-types (configuration-info->num-types cfg) max-types))
+      (filter-performance-info pi nearly-typed?))
+  }
 }
 
 @defproc[(in-configurations [pi performance-info?]) (sequence/c configuration-info?)]{

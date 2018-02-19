@@ -38,6 +38,7 @@
   (sample-info (performance-info->name pi)
                (performance-info->src pi)
                (performance-info->num-units pi)
+               (performance-info->num-configurations pi)
                (performance-info->baseline-runtime pi)
                (performance-info->untyped-runtime pi)
                (performance-info->typed-runtime pi)
@@ -65,4 +66,10 @@
 (define (sample-info->performance-info* si)
   (for/list ([src (in-list (sample-info-sample-src* si))])
     (performance-info-update-src si src)))
+
+;; =============================================================================
+
+(module+ test
+  ;; TODO
+)
 

@@ -11,6 +11,7 @@
     (-> symbol?
         #:src path-string?
         #:num-units natural?
+        #:num-configurations natural?
         #:baseline-runtime nonnegative-real/c
         #:untyped-runtime nonnegative-real/c
         #:typed-runtime nonnegative-real/c
@@ -48,6 +49,9 @@
 
    [performance-info->make-in-configurations
     (-> performance-info? any)]
+
+   [performance-info-update-name
+    (-> performance-info? symbol? performance-info?)]
 
    [performance-info-update-src
     (-> performance-info? path-string? performance-info?)]
@@ -117,6 +121,9 @@
     (-> performance-info? nonnegative-real/c)]
    ;; Returns the overhead of the untyped configuration in `p`
    ;;  relative to the baseline configuration
+
+   [filter-performance-info
+    (-> performance-info? (-> configuration-info? any/c) performance-info?)]
 ))
 
 (require
@@ -144,6 +151,7 @@
   name
   src
   num-units
+  num-configurations
   baseline-runtime
   untyped-runtime
   typed-runtime
@@ -155,11 +163,12 @@
 
 (define (make-performance-info name #:src k
                                     #:num-units num-units
+                                    #:num-configurations num-configurations
                                     #:baseline-runtime baseline
                                     #:untyped-runtime untyped
                                     #:typed-runtime typed
                                     #:make-in-configurations mic)
-  (performance-info name k num-units baseline untyped typed mic))
+  (performance-info name k num-units num-configurations baseline untyped typed mic))
 
 (define performance-info->name
   performance-info-name)
@@ -170,9 +179,8 @@
 (define performance-info->num-units
   performance-info-num-units)
 
-(define (performance-info->num-configurations pi)
-  (define units (performance-info->num-units pi))
-  (expt 2 units))
+(define performance-info->num-configurations
+  performance-info-num-configurations)
 
 (define performance-info->baseline-runtime
   performance-info-baseline-runtime)
@@ -186,10 +194,21 @@
 (define performance-info->make-in-configurations
   performance-info-make-in-configurations)
 
+(define (performance-info-update-name pi new-name)
+  (performance-info new-name
+                    (performance-info->src pi)
+                    (performance-info->num-units pi)
+                    (performance-info->num-configurations pi)
+                    (performance-info->baseline-runtime pi)
+                    (performance-info->untyped-runtime pi)
+                    (performance-info->typed-runtime pi)
+                    (performance-info-make-in-configurations pi)))
+
 (define (performance-info-update-src pi new-src)
   (performance-info (performance-info->name pi)
                     new-src
                     (performance-info->num-units pi)
+                    (performance-info->num-configurations pi)
                     (performance-info->baseline-runtime pi)
                     (performance-info->untyped-runtime pi)
                     (performance-info->typed-runtime pi)
@@ -292,6 +311,27 @@
     (printf "- 5 deliv.     : ~a (~a%)~n" d5 (rnd (pct d5 nc))))
   (void))
 
+(define (filter-performance-info pi keep-cfg?)
+  (define old-name (performance-info->name pi))
+  (define old-num-units (performance-info->num-units pi))
+  (define old-baseline (performance-info->baseline-runtime pi))
+  (define old-untyped (performance-info->untyped-runtime pi))
+  (define old-typed (performance-info->typed-runtime pi))
+  ;; old -> new
+  (define new-name (string->symbol (format "~a%~a" old-name (object-name keep-cfg?))))
+  (define-values [new-num-configurations in-filtered-configurations]
+    (let ([cfg* (for/list ([cfg (in-configurations pi)] #:when (keep-cfg? cfg)) cfg)])
+      (values (length cfg*)
+              (lambda (_pi) cfg*))))
+  (make-performance-info new-name
+                         #:src #false
+                         #:num-units old-num-units
+                         #:num-configurations new-num-configurations
+                         #:baseline-runtime old-baseline
+                         #:untyped-runtime old-untyped
+                         #:typed-runtime old-typed
+                         #:make-in-configurations in-filtered-configurations))
+
 ;; =============================================================================
 
 (module+ test
@@ -299,9 +339,11 @@
 
   (test-case "benchmark->performance-info:example-data"
     (let* ([t* '(2 1 4 2)]
+           [nc (length t*)]
            [pi (make-performance-info 'example
                  #:src "EXAMPLE"
-                 #:num-units (log2 (length t*))
+                 #:num-units (log2 nc)
+                 #:num-configurations nc
                  #:baseline-runtime (first t*)
                  #:untyped-runtime (first t*)
                  #:typed-runtime (last t*)
@@ -312,5 +354,14 @@
       (check-equal? (mean-overhead pi) 11/8)
       (check-equal? (typed/untyped-ratio pi) 1)
       (check-equal? ((deliverable 1.8) pi) 4)
+      (let ([pi%0 (filter-performance-info pi (lambda (cfg) (zero? (configuration-info->num-types cfg))))])
+        (check-not-equal? (performance-info->name pi) (performance-info->name pi%0))
+        (check-false (performance-info->src pi%0))
+        (check-equal? (list (configuration-info (car t*) 0 (list (car t*))))
+                      (for/list ([cfg (in-configurations pi%0)]) cfg)))
+      (check-not-exn
+        (lambda () (performance-info-update-name pi 'yo)))
+      (check-not-exn
+        (lambda () (performance-info-update-src pi #false)))
       (void)))
 )
