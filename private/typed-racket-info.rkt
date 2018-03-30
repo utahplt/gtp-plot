@@ -8,11 +8,26 @@
    [typed-racket-info?
     (-> any/c any)]
    [make-typed-racket-info
-    (-> typed-racket-data? performance-info?)]))
+    (-> typed-racket-data? performance-info?)]
+   [make-typed-racket-sample-info
+    (-> (listof typed-racket-data?)
+        #:name symbol?
+        #:typed-configuration typed-configuration-info?
+        #:untyped-configuration untyped-configuration-info?
+        sample-info?)]
+   [make-typed-racket-configuration-info
+     (-> typed-racket-id? (listof nonnegative-real/c) typed-racket-configuration-info?)]
+   [typed-racket-configuration-info?
+     (-> any/c boolean?)]
+   [typed-configuration-info?
+     (-> any/c boolean?)]
+   [untyped-configuration-info?
+     (-> any/c boolean?)]))
 
 (require
   gtp-plot/configuration-info
   gtp-plot/performance-info
+  gtp-plot/sample-info
   gtp-util
   (only-in gtp-plot/util
     path->name)
@@ -62,6 +77,17 @@
     tr
     in-typed-racket-configurations))
 
+(define (make-typed-racket-sample-info src*
+                                       #:name name
+                                       #:typed-configuration typed-config
+                                       #:untyped-configuration untyped-config)
+  (define num-units (typed-racket-id->num-units (configuration-info->id typed-config)))
+  (define tr (configuration-info->mean-runtime typed-config))
+  (define rr (configuration-info->mean-runtime untyped-config))
+  (define empty-pi
+    (typed-racket-info name "dummy" num-units (expt 2 num-units) rr rr tr in-typed-racket-configurations))
+  (make-sample-info empty-pi src*))
+
 (define (parse-typed-racket-filename ps)
   ;; expecting TR filenames to start with 'name-vXX' where XX is a Racket version
   (define-values [_base name mbd?] (split-path ps))
@@ -74,7 +100,7 @@
   (define go
     (let* ([v (file->value (performance-info->src pi))]
            [num-configs (vector-length v)]
-           [num-units (log2 num-configs)]
+           [num-units (performance-info->num-units pi)]
            [count-hi-bits (λ (cfg)
                             (for/sum ([c (in-string cfg)]
                                       #:when (eq? c #\1))
@@ -95,6 +121,38 @@
 
 (define (stop? a b c)
   (and (eq? #f a) (eq? a b) (eq? b c)))
+
+;; -----------------------------------------------------------------------------
+
+(struct typed-racket-configuration-info configuration-info () #:transparent)
+
+(define (make-typed-racket-configuration-info id t*)
+  (typed-racket-configuration-info id (typed-racket-id->num-types id) t*))
+
+(define (typed-racket-id? str)
+  (and (string? str)
+       (for/and ([c (in-string str)])
+         (memq c '(#\0 #\1)))))
+
+(define (typed-racket-id->num-units str)
+  (string-length str))
+
+(define (typed-racket-id->num-types str)
+  (for/sum ([c (in-string str)])
+    (if (eq? c #\1) 1 0)))
+
+(define (typed-configuration-info? tc)
+  (and (typed-racket-configuration-info? tc)
+       (let ([tid (configuration-info->id tc)])
+         (= (configuration-info->num-types tc)
+            (typed-racket-id->num-types tid)
+            (typed-racket-id->num-units tid)))))
+
+(define (untyped-configuration-info? tc)
+  (and (typed-racket-configuration-info? tc)
+       (= 0
+          (configuration-info->num-types tc)
+          (typed-racket-id->num-types (configuration-info->id tc)))))
 
 ;; =============================================================================
 
@@ -265,4 +323,34 @@
       (untyped/baseline-ratio G)
       1))
 
+  (test-case "typed-racket-id?"
+    (check-pred typed-racket-id? "000")
+    (check-pred typed-racket-id? "011")
+    (check-false (typed-racket-id? "211"))
+    (check-false (typed-racket-id? "a11"))
+    (check-false (typed-racket-id? "0o0")))
+
+  (test-case "typed-racket-id->num-units"
+    (check-equal? (typed-racket-id->num-units "001")
+                  3)
+    (check-equal? (typed-racket-id->num-units "00101011")
+                  8))
+
+  (test-case "typed-racket-id->num-types"
+    (check-equal? (typed-racket-id->num-types "001")
+                  1)
+    (check-equal? (typed-racket-id->num-types "1111")
+                  4)
+    (check-equal? (typed-racket-id->num-types "1")
+                  1))
+
+  (test-case "typed-configuration-info?"
+    (check-true (typed-configuration-info? (make-typed-racket-configuration-info "1" '())))
+    (check-true (typed-configuration-info? (make-typed-racket-configuration-info "1111" '())))
+    (check-false (typed-configuration-info? (make-typed-racket-configuration-info "0" '())))
+    (check-false (typed-configuration-info? (make-typed-racket-configuration-info "1101" '()))))
+
+  (test-case "untyped-configuration-info?"
+    (check-false (untyped-configuration-info? (make-typed-racket-configuration-info "010" '(2 2 2))))
+    (check-true (untyped-configuration-info? (make-typed-racket-configuration-info "000" '(2 2 2)))))
 )

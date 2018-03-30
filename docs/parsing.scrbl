@@ -57,6 +57,32 @@
   Predicate for Typed Racket datasets.
 }
 
+@defproc[(make-typed-racket-sample-info [src (listof typed-racket-info?)]
+                                        [#:name name symbol?]
+                                        [#:typed-configuration tc typed-configuration-info?]
+                                        [#:untyped-configuration uc untyped-configuration-info?]) sample-info?]{
+  Make a @racket[sample-info?] structure for a Typed Racket program,
+   given a list of data files for the program (@racket[src]),
+   a name for the program @racket[name],
+   and data for the program's typed and untyped configurations.
+}
+
+@defproc[(make-typed-racket-configuration-info [id typed-racket-id?] [time* (listof nonnegative-real/c)]) typed-racket-configuration-info?]{
+  Constructor for a Typed Racket configuration.
+}
+
+@defproc[(typed-racket-configuration-info? [x any/c]) boolean?]{
+  Predicate for a Typed Racket configuration.
+}
+
+@defproc[(typed-configuration-info? [tc typed-racket-configuration-info?]) boolean?]{
+  Predicate for a fully-typed Typed Racket configuration.
+}
+
+@defproc[(untyped-configuration-info? [uc untyped-racket-configuration-info?]) boolean?]{
+  Predicate for an untyped Typed Racket configuration.
+}
+
 
 @section[#:tag "gtp-reticulated-info"]{Reticulated Info}
 @defmodule[gtp-plot/reticulated-info]
