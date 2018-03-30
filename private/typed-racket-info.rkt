@@ -48,16 +48,20 @@
 
 (define (typed-racket-data? path)
   (and (path-string? path)
-       (or (parse-typed-racket-filename path)
-           (looks-like-typed-racket-data path))))
+       (looks-like-typed-racket-data path)))
+
+(define NON-SPACE-NON-RPAREN #rx"[^ \t\n\r)]")
 
 (define (looks-like-typed-racket-data path)
   (with-input-from-file path
     (lambda ()
-      (for/first ((ln (in-lines))
-                  #:when (and (not (whitespace-string? ln))
-                              (not (simple-comment-string? ln))))
-        (string-prefix? ln "#(")))))
+      (define first-data-line
+        (for/first ((ln (in-lines))
+                    #:when (and (not (whitespace-string? ln))
+                                (not (simple-comment-string? ln))))
+          (and (string-prefix? ln "#(") ln)))
+      (or (regexp-match? NON-SPACE-NON-RPAREN (substring first-data-line 2))
+          (regexp-match? NON-SPACE-NON-RPAREN (current-input-port))))))
 
 (define (make-typed-racket-info path)
   (define bm-name (or (parse-typed-racket-filename path)
