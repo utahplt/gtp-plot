@@ -3,6 +3,8 @@
 ;; For plotting data on one set of axis
 
 (require racket/contract)
+(define (non-empty-treeof x)
+  (and/c (not/c null?) (treeof x)))
 (provide
   axis/c
   (contract-out
@@ -10,19 +12,19 @@
      (-> performance-info? pict?)]
 
     [overhead-plot
-     (-> (treeof performance-info?) pict?)]
+     (-> (non-empty-treeof performance-info?) pict?)]
 
     [discrete-overhead-plot
      (-> performance-info? (listof real?) pict?)]
 
     [samples-plot
-     (-> performance-info? pict?)]
+     (-> (non-empty-treeof performance-info?) pict?)]
 
     #;[discrete-samples-plot
      (-> performance-info? (listof real?) pict?)]
 
     [exact-runtime-plot
-     (-> (treeof performance-info?) pict?)]
+     (-> (non-empty-treeof performance-info?) pict?)]
 
     [rectangle-plot
      (-> performance-info? pict?)]
@@ -45,6 +47,7 @@
   pict
   plot/no-gui
   plot/utils
+  racket/sequence
   (only-in math/number-theory
     binomial)
   (only-in math/base
@@ -270,18 +273,23 @@
     #:sym (*RATIO-DOT-SYM*)
     #:size (*RATIO-DOT-SIZE*)))
 
-(define (samples-plot si)
-  (log-gtp-plot-info "rendering samples-plot for ~a" si)
+(define (samples-plot pre-si*)
+  (log-gtp-plot-info "rendering samples-plot for ~a" pre-si*)
   ;; TODO use standard-D
-  (define sample-size (sample-info->sample-size si))
-  (define pi* (sample-info->performance-info* si))
-  (define mean-overhead
-    (let ([dc* (map make-simple-deliverable-counter pi*)])
-      (λ (r)
-        (mean (for/list ([dc (in-list dc*)]) (dc r))))))
+  (define multi? (pair? pre-si*))
+  (define si* (if multi? (flatten pre-si*) (list pre-si*)))
+  (define sample-size (sample-info->sample-size (car si*)))
+  (define num-samples (sample-info->num-samples (car si*)))
+  (define pi** (map sample-info->performance-info* si*))
+  (define color0 (*SAMPLE-COLOR*))
+  (define mean-overhead*
+    (for/list ([pi* (in-list pi**)])
+      (let ([dc* (map make-simple-deliverable-counter pi*)])
+        (λ (r)
+          (mean (for/list ([dc (in-list dc*)]) (dc r)))))))
   (define exact-ticks
     (if (*TYPED/UNTYPED-RATIO-XTICK?*)
-      (list (typed/baseline-ratio si))
+      (error 'not-implemented-xtick) ;;(list (typed/baseline-ratio (car si*)))
       '()))
   (define body (maybe-freeze
     (parameterize ([plot-x-ticks (make-overhead-x-ticks exact-ticks)]
@@ -291,13 +299,17 @@
                    [plot-y-far-ticks no-ticks]
                    [plot-tick-size TICK-SIZE]
                    [plot-font-face (*OVERHEAD-FONT-FACE*)]
-                   [plot-font-size (*FONT-SIZE*)]
-                   [*OVERHEAD-LINE-COLOR* (*SAMPLE-COLOR*)])
+                   [plot-font-size (*FONT-SIZE*)])
       (plot-pict
         (list
-          (parameterize ([*INTERVAL-ALPHA* 0.4])
-            (make-count-configurations-function mean-overhead))
-          (make-sample-function-interval pi*)
+          (for/list ([pi* (in-list pi**)]
+                     [mean-overhead (in-list mean-overhead*)]
+                     [i (in-colors color0)])
+            (parameterize ([*OVERHEAD-LINE-COLOR* i])
+              (list
+                (parameterize ([*INTERVAL-ALPHA* 0.4])
+                  (make-count-configurations-function mean-overhead))
+                (make-sample-function-interval pi*))))
           (tick-grid))
         #:x-min 1
         #:x-max (*OVERHEAD-MAX*)
@@ -307,8 +319,12 @@
         #:y-label (and (*OVERHEAD-LABEL?*) "% Configs.")
         #:width (*OVERHEAD-PLOT-WIDTH*)
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
+  (define base-pict
+    (samples-add-legend (car si*) sample-size num-samples body))
   (begin0
-    (samples-add-legend si sample-size (length pi*) body)
+    (if (and (*LEGEND?*) multi?)
+      (add-color-legend base-pict (make-color-legend si* color0))
+      base-pict)
     (log-gtp-plot-info "rendering finished")))
 
 (define (discrete-samples-plot pi D*)
@@ -807,8 +823,16 @@
 (define (list-if . v*)
   (filter values v*))
 
-;; =============================================================================
+(define (in-colors c)
+  (cond
+    [(exact-nonnegative-integer? c)
+     (in-naturals c)]
+    [(string? c)
+     (in-sequences (in-value c) (in-naturals 4))]
+    [else
+     (raise-argument-error 'in-colors "color?" c)]))
 
+;; =============================================================================
 
 (module+ test
   (require
@@ -822,6 +846,11 @@
 
   (define-runtime-path fsm-data "./test/sample_fsm/")
   (define fsm (make-reticulated-info fsm-data))
+
+  (define (sequence-take s n)
+    (for/list ([x s]
+               [_i (in-range n)])
+      x))
 
   (test-case "deliverable-counter"
     (define (check-deliverable-counter/cache pi)
@@ -862,4 +891,10 @@
     (check-false (length=2 '()))
     (check-false (length=2 '(A)))
     (check-false (length=2 '(A A A))))
+
+  (test-case "in-colors"
+    (check-equal? (sequence-take (in-colors 5) 3)
+                  '(5 6 7))
+    (check-equal? (sequence-take (in-colors "green") 3)
+                  '("green" 4 5)))
 )
