@@ -242,6 +242,10 @@
    structure.
 }
 
+@defproc[(sample-info->num-samples [si sample-info?]) natural?]{
+  Count the number of samples in the given structure.
+}
+
 @defproc[(sample-info->performance-info* [si sample-info?]) (listof performance-info?)]{
   Expand a @tech{SRA performance info} structure to a list of @tech{performance info} structures.
   Each structure represents one sample of configurations.

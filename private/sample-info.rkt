@@ -16,6 +16,9 @@
    [sample-info->sample-size
     (-> sample-info? natural?)]
 
+   [sample-info->num-samples
+    (-> sample-info? natural?)]
+
    [sample-info->performance-info*
     (-> sample-info? (listof performance-info?))]))
 
@@ -62,6 +65,9 @@
 
 (define sample-info->sample-size
   sample-info-sample-size)
+
+(define (sample-info->num-samples si)
+  (length (sample-info-sample-src* si)))
 
 (define (sample-info->performance-info* si)
   (for/list ([src (in-list (sample-info-sample-src* si))])
