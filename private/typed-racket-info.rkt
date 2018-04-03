@@ -8,7 +8,7 @@
    [typed-racket-info?
     (-> any/c any)]
    [make-typed-racket-info
-    (-> typed-racket-data? performance-info?)]
+    (->* [typed-racket-data?] [#:name (or/c #f symbol?)] performance-info?)]
    [make-typed-racket-sample-info
     (-> (listof typed-racket-data?)
         #:name symbol?
@@ -63,16 +63,17 @@
       (or (regexp-match? NON-SPACE-NON-RPAREN (substring first-data-line 2))
           (regexp-match? NON-SPACE-NON-RPAREN (current-input-port))))))
 
-(define (make-typed-racket-info path)
-  (define bm-name (or (parse-typed-racket-filename path)
-                      (path->name path)))
+(define (make-typed-racket-info path #:name [name #f])
+  (define bm-name (or name
+                      (string->symbol (parse-typed-racket-filename path))
+                      (string->symbol (path->name path))))
   (define v (file->value path))
   (define nc (vector-length v))
   (define nu (log2 nc))
   (define rr (mean (vector-ref v 0)))
   (define tr (mean (vector-ref v (- nc 1))))
   (typed-racket-info
-    (string->symbol bm-name)
+    bm-name
     path
     nu
     nc

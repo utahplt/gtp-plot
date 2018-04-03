@@ -49,7 +49,7 @@
   }
 }
 
-@defproc[(make-typed-racket-info [ps typed-racket-data?]) typed-racket-info?]{
+@defproc[(make-typed-racket-info [ps typed-racket-data?] [#:name name (or/c #f symbol?) #f]) typed-racket-info?]{
   Build a @tech{performance info} structure from a Typed Racket dataset.
 }
 
