@@ -33,11 +33,14 @@
 (struct sample-info performance-info (
   sample-size
   sample-src*
+  original-in-configurations
 ) #:transparent)
 
 (define (make-sample-info pi src*)
   (define sample-size
     (infer-sample-size pi src*))
+  (define original-in-configurations
+    (performance-info->make-in-configurations pi))
   (sample-info (performance-info->name pi)
                (performance-info->src pi)
                (performance-info->num-units pi)
@@ -45,9 +48,13 @@
                (performance-info->baseline-runtime pi)
                (performance-info->untyped-runtime pi)
                (performance-info->typed-runtime pi)
-               (performance-info->make-in-configurations pi)
+               in-sample-info-configurations
                sample-size
-               src*))
+               src*
+               original-in-configurations))
+
+(define (in-sample-info-configurations si)
+  (apply in-sequences (map in-configurations (sample-info->performance-info* si))))
 
 (define (infer-sample-size pi src*)
   (for/fold ([ss #f])
@@ -70,8 +77,11 @@
   (length (sample-info-sample-src* si)))
 
 (define (sample-info->performance-info* si)
+  (define orig-iter (sample-info-original-in-configurations si))
   (for/list ([src (in-list (sample-info-sample-src* si))])
-    (performance-info-update-src si src)))
+    (performance-info-update-in-configurations
+      (performance-info-update-src si src)
+      orig-iter)))
 
 ;; =============================================================================
 

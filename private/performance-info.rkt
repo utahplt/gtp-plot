@@ -56,6 +56,9 @@
    [performance-info-update-src
     (-> performance-info? path-string? performance-info?)]
 
+   [performance-info-update-in-configurations
+    (-> performance-info? any/c performance-info?)]
+
    [performance-info*->unique-name*
     (-> (listof performance-info?) (unique-listof string?))]
 
@@ -213,6 +216,16 @@
                     (performance-info->untyped-runtime pi)
                     (performance-info->typed-runtime pi)
                     (performance-info-make-in-configurations pi)))
+
+(define (performance-info-update-in-configurations pi new-ic)
+  (performance-info (performance-info->name pi)
+                    (performance-info->src pi)
+                    (performance-info->num-units pi)
+                    (performance-info->num-configurations pi)
+                    (performance-info->baseline-runtime pi)
+                    (performance-info->untyped-runtime pi)
+                    (performance-info->typed-runtime pi)
+                    new-ic))
 
 (define (performance-info*->unique-name* pi*)
   (define base-name* (map performance-info->name pi*))
