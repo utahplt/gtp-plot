@@ -91,6 +91,11 @@
 (defparam *PEN-COLOR-CONVERTER* values (-> Natural Plot-Color))
 (defparam *FONT-SIZE* 10 Natural)
 (defparam *INTERVAL-ALPHA* 1 Nonnegative-Real)
+(defparam *SAMPLE-INTERVAL-ALPHA* 0.4 Nonnegative-Real)
+(defparam *MULTI-INTERVAL-ALPHA* 0.6 Nonnegative-Real)
+(defparam *INTERVAL-STYLE* 'solid plot-brush-style/c)
+(defparam *SAMPLE-INTERVAL-STYLE* 'solid plot-brush-style/c)
+(defparam *MULTI-INTERVAL-STYLE* 'solid plot-brush-style/c)
 (defparam *LEGEND-HSPACE* 20 Pict-Units)
 (defparam *LEGEND-VSPACE* 10 Pict-Units)
 (defparam *LEGEND?* #true Boolean)
@@ -199,7 +204,8 @@
                    [plot-tick-size TICK-SIZE]
                    [plot-font-face (*OVERHEAD-FONT-FACE*)]
                    [plot-font-size (*FONT-SIZE*)]
-                   [*INTERVAL-ALPHA* (if multi? 0.6 (*INTERVAL-ALPHA*))])
+                   [*INTERVAL-ALPHA* (if multi? (*MULTI-INTERVAL-ALPHA*) (*INTERVAL-ALPHA*))]
+                   [*INTERVAL-STYLE* (if multi? (*MULTI-INTERVAL-STYLE*) (*INTERVAL-STYLE*))])
       (plot-pict
         (list
           (if (length=2 pi*)
@@ -307,7 +313,8 @@
                      [i (in-colors color0)])
             (parameterize ([*OVERHEAD-LINE-COLOR* i])
               (list
-                (parameterize ([*INTERVAL-ALPHA* 0.4])
+                (parameterize ([*INTERVAL-ALPHA* (*SAMPLE-INTERVAL-ALPHA*)]
+                               [*INTERVAL-STYLE* (*SAMPLE-INTERVAL-STYLE*)])
                   (make-count-configurations-function mean-overhead))
                 (make-sample-function-interval pi*))))
           (tick-grid))
@@ -553,6 +560,7 @@
     0 (*OVERHEAD-MAX*)
     #:alpha (*INTERVAL-ALPHA*)
     #:color ((*BRUSH-COLOR-CONVERTER*) (*OVERHEAD-LINE-COLOR*))
+    #:style (*INTERVAL-STYLE*)
     #:line1-style 'transparent
     #:line2-color ((*PEN-COLOR-CONVERTER*) (*OVERHEAD-LINE-COLOR*))
     #:line2-width (*OVERHEAD-LINE-WIDTH*)
