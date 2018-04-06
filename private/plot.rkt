@@ -305,18 +305,21 @@
                    [plot-y-far-ticks no-ticks]
                    [plot-tick-size TICK-SIZE]
                    [plot-font-face (*OVERHEAD-FONT-FACE*)]
-                   [plot-font-size (*FONT-SIZE*)])
+                   [plot-font-size (*FONT-SIZE*)]
+                   [*INTERVAL-ALPHA* (*SAMPLE-INTERVAL-ALPHA*)]
+                   [*INTERVAL-STYLE* (*SAMPLE-INTERVAL-STYLE*)])
       (plot-pict
         (list
-          (for/list ([pi* (in-list pi**)]
-                     [mean-overhead (in-list mean-overhead*)]
-                     [i (in-colors color0)])
-            (parameterize ([*OVERHEAD-LINE-COLOR* i])
-              (list
-                (parameterize ([*INTERVAL-ALPHA* (*SAMPLE-INTERVAL-ALPHA*)]
-                               [*INTERVAL-STYLE* (*SAMPLE-INTERVAL-STYLE*)])
-                  (make-count-configurations-function mean-overhead))
-                (make-sample-function-interval pi*))))
+          (if (length=2 pi**)
+            (parameterize ([*OVERHEAD-LINE-COLOR* color0])
+              (make-overlapping-sample-intervals (car pi**) (cadr pi**) (car mean-overhead*) (cadr mean-overhead*)))
+            (for/list ([pi* (in-list pi**)]
+                       [mean-overhead (in-list mean-overhead*)]
+                       [i (in-colors color0)])
+              (parameterize ([*OVERHEAD-LINE-COLOR* i])
+                (list
+                  (make-count-configurations-function mean-overhead)
+                  (make-sample-function-interval pi*)))))
           (tick-grid))
         #:x-min 1
         #:x-max (*OVERHEAD-MAX*)
@@ -542,6 +545,22 @@
       (make-overhead-function-interval lo0 f0))
     (parameterize ([*OVERHEAD-LINE-COLOR* color1])
       (make-count-configurations-function f1 #:interval? #f))))
+
+(define (make-overlapping-sample-intervals pi*0 pi*1 m0 m1)
+  (define color0 (*OVERHEAD-LINE-COLOR*))
+  (define color1 (+ color0 1))
+  (define f0 (cached (->deliverable-counter m0)))
+  (define f1 (cached (->deliverable-counter m1)))
+  (define (lo0 n) 0)
+  (define (lo1 n) 0)
+  (list
+    (parameterize ([*OVERHEAD-LINE-COLOR* color1])
+      (make-overhead-function-interval lo1 f1))
+    (parameterize ([*OVERHEAD-LINE-COLOR* color0])
+      (list (make-overhead-function-interval lo0 f0)
+            (make-sample-function-interval pi*0)))
+    (parameterize ([*OVERHEAD-LINE-COLOR* color1])
+      (make-sample-function-interval pi*1))))
 
 (define (make-count-configurations-function pi #:interval? [ivl #t])
   (define f (->deliverable-counter pi))
