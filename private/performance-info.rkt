@@ -5,6 +5,7 @@
 (require racket/contract)
 (provide
   performance-info
+  performance-info-make-in-configurations
 
   (contract-out
    [make-performance-info

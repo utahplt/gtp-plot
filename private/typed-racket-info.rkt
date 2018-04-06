@@ -10,7 +10,7 @@
    [make-typed-racket-info
     (->* [typed-racket-data?] [#:name (or/c #f symbol?)] performance-info?)]
    [make-typed-racket-sample-info
-    (-> (listof typed-racket-data?)
+    (-> (listof (listof configuration-info?))
         #:name symbol?
         #:typed-configuration typed-configuration-info?
         #:untyped-configuration untyped-configuration-info?
@@ -60,8 +60,9 @@
                     #:when (and (not (whitespace-string? ln))
                                 (not (simple-comment-string? ln))))
           (and (string-prefix? ln "#(") ln)))
-      (or (regexp-match? NON-SPACE-NON-RPAREN (substring first-data-line 2))
-          (regexp-match? NON-SPACE-NON-RPAREN (current-input-port))))))
+      (and first-data-line
+           (or (regexp-match? NON-SPACE-NON-RPAREN (substring first-data-line 2))
+               (regexp-match? NON-SPACE-NON-RPAREN (current-input-port)))))))
 
 (define (make-typed-racket-info path #:name [name #f])
   (define bm-name (or name
@@ -82,7 +83,7 @@
     tr
     in-typed-racket-configurations))
 
-(define (make-typed-racket-sample-info src*
+(define (make-typed-racket-sample-info cfg**
                                        #:name name
                                        #:typed-configuration typed-config
                                        #:untyped-configuration untyped-config)
@@ -91,7 +92,7 @@
   (define rr (configuration-info->mean-runtime untyped-config))
   (define empty-pi
     (typed-racket-info name "dummy" num-units (expt 2 num-units) rr rr tr in-typed-racket-configurations))
-  (make-sample-info empty-pi src*))
+  (make-sample-info empty-pi cfg**))
 
 (define (parse-typed-racket-filename ps)
   ;; expecting TR filenames to start with 'name-vXX' where XX is a Racket version
@@ -164,6 +165,8 @@
 (module+ test
   (require rackunit rackunit-abbrevs racket/runtime-path)
 
+  (define CI? (and (getenv "CI") #true))
+
   (define-runtime-path morsecode-file "./test/morsecode-v6.4.rktd")
   (define-runtime-path gregor-file "./test/gregor-v6.4.rktd")
 
@@ -176,157 +179,159 @@
     (check-false (typed-racket-data? 42)))
 
   (test-case "morsecode"
-    (define M (make-typed-racket-info morsecode-file))
+    (unless CI?
+      (define M (make-typed-racket-info morsecode-file))
 
-    (check-equal?
-      (performance-info->name M)
-      'morsecode)
-    (check-equal?
-      (performance-info->src M)
-      morsecode-file)
-    (check-equal?
-      (performance-info->num-units M)
-      4)
-    (check-equal?
-      (performance-info->num-configurations M)
-      16)
-    (check-equal?
-      (performance-info->baseline-runtime M)
-      (performance-info->untyped-runtime M))
-    (check-equal?
-      (performance-info->baseline-runtime M)
-      (mean '(1328 1341 1321 1351 1326 1319 1348 1278 1319 1338)))
-    (check-equal?
-      (performance-info->typed-runtime M)
-      (mean '(1265 1258 1285 1261 1265 1250 1238 1260 1279 1271)))
-    (check-equal?
-      (performance-info->src (performance-info-update-src M gregor-file))
-      gregor-file)
-    (check-equal?
-      (for/list ([cfg (in-configurations M)]) (configuration-info->id cfg))
-      '("0000" "0001" "0010" "0011" "0100" "0101" "0110" "0111"
-        "1000" "1001" "1010" "1011" "1100" "1101" "1110" "1111"))
-    (check-equal?
-      (count-configurations M (λ (cfg) #true))
-      16)
-    (check-equal?
-      (count-configurations M (let ([done (box #f)])
-                                 (λ (cfg)
-                                   (if (unbox done)
-                                     #f
-                                     (set-box! done #true)))))
-      1)
-    (check-equal?
-      ((deliverable 1.0) M)
-      4)
-    (check-equal?
-      ((deliverable 1.8) M)
-      14)
-    (check-equal?
-      ((deliverable 5) M)
-      16)
-    (check-equal?
-      (length (filter-configurations M (λ (r) #true)))
-      16)
-    (check-equal?
-      (overhead M 1000)
-      10000/13269)
-    (check-equal?
-      (overhead M 9000)
-      30000/4423)
-    (check-equal?
-      (max-overhead M)
-      8671/4423)
-    (check-equal?
-      (mean-overhead M)
-      70873/53076)
-    (check-equal?
-      (min-overhead M)
-      11875/13269)
-    (check-equal?
-      (typed/baseline-ratio M)
-      (typed/untyped-ratio M))
-    (check-equal?
-      (typed/untyped-ratio M)
-      12632/13269)
-    (check-equal?
-      (untyped/baseline-ratio M)
-      1)
-    (let* ([n-1? (lambda (cfg) (= (configuration-info->num-types cfg) (sub1 (performance-info->num-units M))))]
-           [M% (filter-performance-info M n-1?)]
-           [cfg* (for/list ((x (in-configurations M%))) x)])
-      (check-equal? (length cfg*) (performance-info->num-units M))))
+      (check-equal?
+        (performance-info->name M)
+        'morsecode)
+      (check-equal?
+        (performance-info->src M)
+        morsecode-file)
+      (check-equal?
+        (performance-info->num-units M)
+        4)
+      (check-equal?
+        (performance-info->num-configurations M)
+        16)
+      (check-equal?
+        (performance-info->baseline-runtime M)
+        (performance-info->untyped-runtime M))
+      (check-equal?
+        (performance-info->baseline-runtime M)
+        (mean '(1328 1341 1321 1351 1326 1319 1348 1278 1319 1338)))
+      (check-equal?
+        (performance-info->typed-runtime M)
+        (mean '(1265 1258 1285 1261 1265 1250 1238 1260 1279 1271)))
+      (check-equal?
+        (performance-info->src (performance-info-update-src M gregor-file))
+        gregor-file)
+      (check-equal?
+        (for/list ([cfg (in-configurations M)]) (configuration-info->id cfg))
+        '("0000" "0001" "0010" "0011" "0100" "0101" "0110" "0111"
+          "1000" "1001" "1010" "1011" "1100" "1101" "1110" "1111"))
+      (check-equal?
+        (count-configurations M (λ (cfg) #true))
+        16)
+      (check-equal?
+        (count-configurations M (let ([done (box #f)])
+                                   (λ (cfg)
+                                     (if (unbox done)
+                                       #f
+                                       (set-box! done #true)))))
+        1)
+      (check-equal?
+        ((deliverable 1.0) M)
+        4)
+      (check-equal?
+        ((deliverable 1.8) M)
+        14)
+      (check-equal?
+        ((deliverable 5) M)
+        16)
+      (check-equal?
+        (length (filter-configurations M (λ (r) #true)))
+        16)
+      (check-equal?
+        (overhead M 1000)
+        10000/13269)
+      (check-equal?
+        (overhead M 9000)
+        30000/4423)
+      (check-equal?
+        (max-overhead M)
+        8671/4423)
+      (check-equal?
+        (mean-overhead M)
+        70873/53076)
+      (check-equal?
+        (min-overhead M)
+        11875/13269)
+      (check-equal?
+        (typed/baseline-ratio M)
+        (typed/untyped-ratio M))
+      (check-equal?
+        (typed/untyped-ratio M)
+        12632/13269)
+      (check-equal?
+        (untyped/baseline-ratio M)
+        1)
+      (let* ([n-1? (lambda (cfg) (= (configuration-info->num-types cfg) (sub1 (performance-info->num-units M))))]
+             [M% (filter-performance-info M n-1?)]
+             [cfg* (for/list ((x (in-configurations M%))) x)])
+        (check-equal? (length cfg*) (performance-info->num-units M)))))
 
   (test-case "gregor"
-    (define G (make-typed-racket-info gregor-file))
+    (unless CI?
+      (define G (make-typed-racket-info gregor-file))
 
-    (check-equal?
-      (performance-info->name G)
-      'gregor)
-    (check-equal?
-      (performance-info->src G)
-      gregor-file)
-    (check-equal?
-      (performance-info->num-units G)
-      13)
-    (check-equal?
-      (performance-info->num-configurations G)
-      (expt 2 13))
-    (check-equal?
-      (performance-info->baseline-runtime G)
-      (performance-info->untyped-runtime G))
-    (check-equal?
-      (performance-info->baseline-runtime G)
-      19326/11)
-    (check-equal?
-      (performance-info->typed-runtime G)
-      20657/11)
-    (check-equal?
-      (count-configurations G (λ (cfg) #true))
-      8192)
-    (check-equal?
-      (count-configurations G (let ([done (box #f)])
-                                 (λ (cfg)
-                                   (if (unbox done)
-                                     #f
-                                     (set-box! done #true)))))
-      1)
-    (check-equal?
-      ((deliverable 1.0) G)
-      2)
-    (check-equal?
-      ((deliverable 1.8) G)
-      4806)
-    (check-equal?
-      ((deliverable 5) G)
-      8192)
-    (check-equal?
-      (length (filter-configurations G (λ (r) #true)))
-      8192)
-    (check-equal?
-      (overhead G 1000)
-      5500/9663)
-    (check-equal?
-      (overhead G 9000)
-      16500/3221)
-    (check-equal?
-      (max-overhead G)
-      21628/9663)
-    (check-equal?
-      (mean-overhead G)
-      91811223/52772864)
-    (check-equal?
-      (min-overhead G)
-      6393/6442)
-    (check-equal?
-      (typed/baseline-ratio G)
-      (typed/untyped-ratio G))
-    (check-equal?
-      (typed/untyped-ratio G)
-      20657/19326)
-    (check-equal?
-      (untyped/baseline-ratio G)
-      1))
+      (check-equal?
+        (performance-info->name G)
+        'gregor)
+      (check-equal?
+        (performance-info->src G)
+        gregor-file)
+      (check-equal?
+        (performance-info->num-units G)
+        13)
+      (check-equal?
+        (performance-info->num-configurations G)
+        (expt 2 13))
+      (check-equal?
+        (performance-info->baseline-runtime G)
+        (performance-info->untyped-runtime G))
+      (check-equal?
+        (performance-info->baseline-runtime G)
+        19326/11)
+      (check-equal?
+        (performance-info->typed-runtime G)
+        20657/11)
+      (check-equal?
+        (count-configurations G (λ (cfg) #true))
+        8192)
+      (check-equal?
+        (count-configurations G (let ([done (box #f)])
+                                   (λ (cfg)
+                                     (if (unbox done)
+                                       #f
+                                       (set-box! done #true)))))
+        1)
+      (check-equal?
+        ((deliverable 1.0) G)
+        2)
+      (check-equal?
+        ((deliverable 1.8) G)
+        4806)
+      (check-equal?
+        ((deliverable 5) G)
+        8192)
+      (check-equal?
+        (length (filter-configurations G (λ (r) #true)))
+        8192)
+      (check-equal?
+        (overhead G 1000)
+        5500/9663)
+      (check-equal?
+        (overhead G 9000)
+        16500/3221)
+      (check-equal?
+        (max-overhead G)
+        21628/9663)
+      (check-equal?
+        (mean-overhead G)
+        91811223/52772864)
+      (check-equal?
+        (min-overhead G)
+        6393/6442)
+      (check-equal?
+        (typed/baseline-ratio G)
+        (typed/untyped-ratio G))
+      (check-equal?
+        (typed/untyped-ratio G)
+        20657/19326)
+      (check-equal?
+        (untyped/baseline-ratio G)
+        1)))
 
   (test-case "typed-racket-id?"
     (check-pred typed-racket-id? "000")
@@ -358,4 +363,25 @@
   (test-case "untyped-configuration-info?"
     (check-false (untyped-configuration-info? (make-typed-racket-configuration-info "010" '(2 2 2))))
     (check-true (untyped-configuration-info? (make-typed-racket-configuration-info "000" '(2 2 2)))))
+
+  (test-case "make-typed-racket-sample-info"
+    (define-values [mbta-si cfg**]
+      (let* ([cfg0 (make-typed-racket-configuration-info "0111" '(1464 1532 1488 1520 1496 1472))]
+             [cfg1 (make-typed-racket-configuration-info "0110" '(2876 2872 2964 2916 2900 2872))]
+             [cfg2 (make-typed-racket-configuration-info "1100" '(1472 1544 1516 1540 1508 1540))]
+             [cfg3 (make-typed-racket-configuration-info "1001" '(1540 1496 1528 1560 1552 1552))]
+             [cfg** (list (list cfg0 cfg1) (list cfg2 cfg3))]
+             [uc (make-typed-racket-configuration-info "0000" '(1464 1532 1488 1520 1496 1472))]
+             [tc (make-typed-racket-configuration-info "1111" '(2816 2804 2940 2872 2932 2904))])
+        (values (make-typed-racket-sample-info cfg** #:name 'mbta #:typed-configuration tc #:untyped-configuration uc)
+                cfg**)))
+    (check-true (sample-info? mbta-si))
+    (check-equal?
+      (for*/list ([pi (in-list (sample-info->performance-info* mbta-si))]
+                  [cfg (in-configurations pi)])
+        (configuration-info->id cfg))
+      (for*/list ([cfg* (in-list cfg**)]
+                  [cfg (in-list cfg*)])
+        (configuration-info->id cfg)))
+    (void))
 )
