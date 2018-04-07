@@ -17,8 +17,7 @@
   gtp-plot/system
   gtp-plot/performance-info
   gtp-plot/util
-  (only-in file/glob
-    glob)
+  file/glob
   (only-in file/gunzip
     gunzip)
   (only-in math/statistics
@@ -27,6 +26,8 @@
     file->value)
   (only-in racket/math
     natural?)
+  (only-in racket/sequence
+    sequence->list)
   (only-in racket/string
     string-split
     string-replace))
@@ -82,9 +83,10 @@
       untyped-runtime
       typed-runtime
       in-reticulated-configurations))
-  (define samples
-    (glob (build-path path SAMPLE-GLOB)))
-  (make-sample-info ri samples))
+  (define cfg**
+    (for/list ([sample (in-glob (build-path path SAMPLE-GLOB))])
+      (sequence->list (in-reticulated-configurations/src sample))))
+  (make-sample-info ri cfg**))
 
 (define (make-reticulated-exhaustive-info path)
   (define name (parse-reticulated-directory-name path))
@@ -114,6 +116,9 @@
   (define src (performance-info->src pi))
   (when (equal? src UNDEFINED-SRC)
     (raise-argument-error 'in-configurations "reticulated-info? with exhaustive data" pi))
+  (in-reticulated-configurations/src src))
+
+(define (in-reticulated-configurations/src src)
   (define go
     (let ([p (open-input-file src)]
           [line-number (box 0)])
