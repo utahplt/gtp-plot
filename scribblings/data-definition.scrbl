@@ -230,9 +230,9 @@
   Predicate for @tech{SRA performance info} structures.
 }
 
-@defproc[(make-sample-info [pi performance-info?] [samples (listof path-string?)]) sample-info?]{
+@defproc[(make-sample-info [pi performance-info?] [samples (listof (listof configuration-info?))]) sample-info?]{
   Make an @tech{SRA performance info} structure from a @tech{performance info} structure
-   and sampled datasets.
+   and sampled configurations.
   Logs an @racket['error]-level message to @racket[gtp-plot-logger] if
    the sampled datasets do not all contain the same number of configurations.
 }
