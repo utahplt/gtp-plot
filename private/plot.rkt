@@ -26,6 +26,9 @@
     [exact-runtime-plot
      (-> (non-empty-treeof performance-info?) pict?)]
 
+    [relative-overhead-cdf
+      (-> performance-info? performance-info? pict?)]
+
     [rectangle-plot
      (-> performance-info? pict?)]
 
@@ -373,6 +376,97 @@
   (begin0
     (samples-add-legend (performance-info->name si) sample-size (length pi*) body)
     (log-gtp-plot-info "rendering finished")))
+
+(define (relative-overhead-cdf pi-0 pi-1)
+  (define bm
+    (let ([name-0 (performance-info->name pi-0)]
+          [name-1 (performance-info->name pi-1)])
+      (if (eq? name-0 name-1)
+        name-0
+        (raise-arguments-error 'relative-overhead-cdf "expected performance-info for the same benchmark" "pi-0" pi-0 "pi-1" pi-1))))
+  (define config->t0+t1
+    #;(for/list ([cfg0 (in-configurations pi-0)]
+               [cfg1 (in-configurations pi-1)])
+      (define id0 (configuration-info->id cfg0))
+      (define id1 (configuration-info->id cfg1))
+      (unless (equal? id0 id1)
+        (raise-arguments-error 'relative-overhead-cfg "mis-matched configurations" "id0" id0 "id1" id1))
+      (list id0 (configuration-info->mean-runtime cfg0) (configuration-info->mean-runtime cfg1)))
+    (let* ([H (make-hash)]
+           [make-updater
+             (lambda (i t)
+               (lambda (m*)
+                 (if (< (length m*) i)
+                   (cons t m*)
+                   (cons (mean (list t (car m*))) (cdr m*)))))]
+           [_
+            (for ((pi (in-list (list pi-1 pi-0)))
+                  (i (in-naturals 1)))
+              (for ((cfg (in-configurations pi)))
+                (define id (configuration-info->id cfg))
+                (define t (configuration-info->mean-runtime cfg))
+                (hash-update! H id (make-updater i t) '())))])
+      H))
+  (void
+    (for (((k v) (in-hash config->t0+t1)))
+      (unless (= 2 (length v))
+        (printf "ERROR wrong number of values ~a ~a ~a ~n"  bm k v))))
+  (define dataset-num-configs (hash-count config->t0+t1))
+  (define actual-num-configs
+    (let ([nc-0 (performance-info->num-configurations pi-0)]
+          [nc-1 (performance-info->num-configurations pi-1)])
+      (if (= nc-0 nc-1)
+        nc-0
+        (raise-arguments-error 'relative-overhead-cfg "expected performance-info for the same benchmark, but num. configs is different" "pi-0" pi-0 "num-configs-0" nc-0 "pi-1" pi-1 "num-configs-0" nc-0))))
+  (define overhead->num-configs
+    (let* ([H (make-hash)]
+           [relative-overhead (lambda (v) (/ (cadr v) (car v)))]
+           [_
+            (for (((k v) (in-hash config->t0+t1)))
+              ;(define k (car kv))
+              ;(define v (cdr kv))
+              (unless (= 2 (length v))
+                (raise-user-error 'fail "bad values ~a ~a" k v))
+              (define ovr (relative-overhead v))
+              (hash-update! H (truncate (* ovr 100)) add1 0))])
+      H))
+  (define (f-lo r) 0)
+  (define (f-hi r)
+    (define num-good-configs
+      (for/sum (((k v) (in-hash overhead->num-configs))
+                #:when (<= k (* 100 r)))
+        v))
+    (pct num-good-configs dataset-num-configs))
+  (define body (maybe-freeze
+    (parameterize ([plot-x-ticks (make-overhead-x-ticks)]
+                   [plot-y-ticks (make-overhead-y-ticks)]
+                   [plot-x-far-ticks no-ticks]
+                   [plot-y-far-ticks no-ticks]
+                   [plot-tick-size TICK-SIZE]
+                   [plot-font-face (*OVERHEAD-FONT-FACE*)]
+                   [plot-font-size (*FONT-SIZE*)])
+      (plot-pict
+        (list #;(discrete-histogram
+                (for/list (((k v) (in-hash f-hi)))
+                  (vector k (pct v dataset-num-configs))))
+              (make-overhead-function-interval f-lo f-hi)
+              (tick-grid))
+        #:x-min 0
+        #:x-max #;(apply max (hash-keys f-hi)) (*OVERHEAD-MAX*)
+        #:y-min 0
+        #:y-max 100
+        #:x-label (and (*OVERHEAD-LABEL?*) "Overhead")
+        #:y-label (and (*OVERHEAD-LABEL?*) "% Configs.")
+        #:width (*OVERHEAD-PLOT-WIDTH*)
+        #:height (*OVERHEAD-PLOT-HEIGHT*)))))
+  (define base-pict
+    (add-legend (render-benchmark-name bm) body
+                (render-count dataset-num-configs
+                              (if (< dataset-num-configs actual-num-configs) "unique configs." "configurations"))))
+  (begin0
+    base-pict
+    (log-gtp-plot-info "rendering finished")))
+
 
 (define (cloud-plot pi)
   (log-gtp-plot-info "rendering cloud-plot for ~a" pi)
@@ -768,7 +862,7 @@
                 (blank 0 0)))]
      [else
       (values pi (blank 0 0))]))
-  (define s-info (title-text (format "~a samples of ~a configurations" num-samples sample-size)))
+  (define s-info (render-count num-samples (format "samples of ~a configurations" (add-commas sample-size))))
   (add-legend (hb-append (*LEGEND-HSPACE*) (render-benchmark-name name) tp-ratio)
               pict s-info))
 
@@ -910,6 +1004,9 @@
   (test-case "samples-plot"
     (check-true (pict? (samples-plot fsm))))
 
+  (test-case "relative-overhead-cdf"
+    (check-true (pict? (relative-overhead-cdf fsm fsm))))
+
   #;(test-case "validate-samples-plot"
     (check-true (pict? (validate-samples-plot espionage))))
 
@@ -925,3 +1022,4 @@
     (check-equal? (sequence-take (in-colors "green") 3)
                   '("green" 4 5)))
 )
+

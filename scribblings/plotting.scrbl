@@ -119,6 +119,29 @@ The appearance of these plots is subject to change.
   @render-demo[(rectangle-plot mbta)]
 }
 
+@defproc[(relative-overhead-cdf [pi-base performance-info?] [pi-new performance-info?]) pict?]{
+  Plot a CDF with the relative overhead of @racket[pi-new] vs. @racket[pi-base].
+  More precisely:
+  @itemlist[
+  @item{
+    finds the configurations that are common to @racket[pi-new] and @racket[pi-base];
+  }
+  @item{
+    groups the configurations by the quotient of their @racket[pi-new] runtime
+     and @racket[pi-base] runtime;
+  }
+  @item{
+    plots a line of points @math{(x,y)}, which means: @math{y%} of the common
+     configurations are at most @math{x} times slower on @racket[pi-new]
+  }
+  ]
+
+  If @racket[pi-old] and @racket[pi-new] are the same, then the relative overhead
+   of each configuration is 1.
+
+  @render-demo[(relative-overhead-cdf mbta mbta)]
+}
+
 @defproc[(grid-plot [make-plot (-> any/c pict?)] [data* (listof any/c)]) pict?]{
   Build plots for a sequence of datasets and arrange the plots into a grid.
 
