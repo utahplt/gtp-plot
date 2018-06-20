@@ -844,7 +844,7 @@
              (define v (pre-tick-value pt))
              (cond
               [(= v max-runtime)
-               (format "~as" v)]
+               (format "~ams" v)]
               [else
                (~r v #:precision 1)])))))
 
