@@ -98,7 +98,7 @@
 (defparam *MULTI-INTERVAL-ALPHA* 0.6 Nonnegative-Real)
 (defparam *INTERVAL-STYLE* 'solid plot-brush-style/c)
 (defparam *SAMPLE-INTERVAL-STYLE* 'solid plot-brush-style/c)
-(defparam *MULTI-INTERVAL-STYLE* 'solid plot-brush-style/c)
+(defparam *MULTI-INTERVAL-STYLE* #f (or/c #f plot-brush-style/c (listof plot-brush-style/c)))
 (defparam *LEGEND-HSPACE* 20 Pict-Units)
 (defparam *LEGEND-VSPACE* 10 Pict-Units)
 (defparam *LEGEND?* #true Boolean)
@@ -207,8 +207,7 @@
                    [plot-tick-size TICK-SIZE]
                    [plot-font-face (*OVERHEAD-FONT-FACE*)]
                    [plot-font-size (*FONT-SIZE*)]
-                   [*INTERVAL-ALPHA* (if multi? (*MULTI-INTERVAL-ALPHA*) (*INTERVAL-ALPHA*))]
-                   [*INTERVAL-STYLE* (if multi? (*MULTI-INTERVAL-STYLE*) (*INTERVAL-STYLE*))])
+                   [*INTERVAL-ALPHA* (if multi? (*MULTI-INTERVAL-ALPHA*) (*INTERVAL-ALPHA*))])
       (plot-pict
         (list
           (if (length=2 pi*)
@@ -632,13 +631,36 @@
   (define f1 (cached (->deliverable-counter pi1)))
   (define (lo0 n) 0)
   (define (lo1 n) 0)
+  (define-values [brush-style0 brush-style1]
+    (let ([s2
+           (for/list ([i (in-range 2)]
+                      [s (make-multi-interval-style*)])
+             s)])
+      (values (car s2) (cadr s2))))
   (list
-    (parameterize ([*OVERHEAD-LINE-COLOR* color1])
+    (parameterize ([*OVERHEAD-LINE-COLOR* color1]
+                   [*INTERVAL-STYLE* brush-style1])
       (make-overhead-function-interval lo1 f1))
-    (parameterize ([*OVERHEAD-LINE-COLOR* color0])
+    (parameterize ([*OVERHEAD-LINE-COLOR* color0]
+                   [*INTERVAL-STYLE* brush-style0])
       (make-overhead-function-interval lo0 f0))
-    (parameterize ([*OVERHEAD-LINE-COLOR* color1])
+    (parameterize ([*OVERHEAD-LINE-COLOR* color1]
+                   [*INTERVAL-STYLE* brush-style1])
       (make-count-configurations-function f1 #:interval? #f))))
+
+;; : (-> plot-brush-style/c)
+;; return a sequence of brush styles, for painting a few multi intervals
+(define (make-multi-interval-style*)
+  (define mis (*MULTI-INTERVAL-STYLE*))
+  (define inner-seq
+    (cond
+     [(not mis)
+      (in-value (*INTERVAL-STYLE*))]
+     [(not (list? mis))
+      (in-value mis)]
+     [else
+       mis]))
+  (in-cycle inner-seq))
 
 (define (make-overlapping-sample-intervals pi*0 pi*1 m0 m1)
   (define color0 (*OVERHEAD-LINE-COLOR*))
