@@ -123,6 +123,7 @@
 (defparam *POINT-COLOR* 2 plot-color/c)
 (defparam *POINT-SIZE* 3 Positive-Index)
 (defparam *POINT-SYMBOL* 'fullcircle point-sym/c)
+(defparam *MULTI-POINT-SYMBOL* #false (or/c #f point-sym/c (listof point-sym/c)))
 (defparam *RATIO-DOT-COLOR* "firebrick" Color)
 (defparam *RATIO-DOT-SIZE* 8 Natural)
 (defparam *RATIO-DOT-SYM* 'plus point-sym/c)
@@ -150,10 +151,12 @@
     (list
       (make-vrule* nt)
       (for/list ([pi (in-list pi*)]
-                 [color (in-naturals color0)])
+                 [color (in-naturals color0)]
+                 [sym (make-point-symbol*)])
         (parameterize ([*POINT-COLOR* color]
                        [*POINT-SIZE* size/num-units]
-                       [*POINT-ALPHA* alpha/num-units])
+                       [*POINT-ALPHA* alpha/num-units]
+                       [*POINT-SYMBOL* sym])
           (for/fold ([acc '()])
                     ([cfg (in-configurations pi)])
             (define num-types (configuration-info->num-types cfg))
@@ -648,18 +651,23 @@
                    [*INTERVAL-STYLE* brush-style1])
       (make-count-configurations-function f1 #:interval? #f))))
 
-;; : (-> plot-brush-style/c)
+;; make-multi-interval-style* : (-> plot-brush-style/c)
 ;; return a sequence of brush styles, for painting a few multi intervals
 (define (make-multi-interval-style*)
-  (define mis (*MULTI-INTERVAL-STYLE*))
+  (make-cycle/default (*MULTI-INTERVAL-STYLE*) (*INTERVAL-STYLE*)))
+
+(define (make-point-symbol*)
+  (make-cycle/default (*MULTI-POINT-SYMBOL*) (*POINT-SYMBOL*)))
+
+(define (make-cycle/default v default)
   (define inner-seq
     (cond
-     [(not mis)
-      (in-value (*INTERVAL-STYLE*))]
-     [(not (list? mis))
-      (in-value mis)]
+     [(not v)
+      (in-value default)]
+     [(not (list? v))
+      (in-value v)]
      [else
-       mis]))
+       v]))
   (in-cycle inner-seq))
 
 (define (make-overlapping-sample-intervals pi*0 pi*1 m0 m1)
