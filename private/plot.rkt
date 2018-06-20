@@ -183,7 +183,7 @@
         #:x-max (+ nt 0.5)
         #:y-min 0
         #:y-max y-max
-        #:x-label (and (*OVERHEAD-LABEL?*) "Num Type Ann.")
+        #:x-label (and (*OVERHEAD-LABEL?*) "Num. Typed Units")
         #:y-label (and (*OVERHEAD-LABEL?*) "Time (ms)")
         #:width (*OVERHEAD-PLOT-WIDTH*)
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
@@ -499,7 +499,7 @@
         ;; #:x-max (+ nt 1)
         ;; #:y-min 0
         ;; #:y-max ;; OBVIOUS
-        #:x-label #f #;(and (*OVERHEAD-LABEL?*) "Num Type Ann.")
+        #:x-label #f #;(and (*OVERHEAD-LABEL?*) "Num.Typed Units")
         #:y-label #f #;(and (*OVERHEAD-LABEL?*) "Time (ms)")
         #:width (*OVERHEAD-PLOT-WIDTH*)
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
