@@ -873,9 +873,7 @@
 (define (exact-add-legend bm-name num-points pict)
   (define name (render-benchmark-name bm-name))
   (define np
-    (if (*OVERHEAD-SHOW-RATIO*)
-      (render-count num-points "points")
-      (blank 0 0)))
+    (render-count num-points "points"))
   (add-legend name pict np))
 
 (define (cloud-add-legend bm-name pict)
