@@ -193,7 +193,7 @@
     (if (and multi? (*LEGEND?*))
       (add-color-legend base-pict (make-color-legend pi* color0))
       base-pict)
-    (log-gtp-plot-info "rendering complete")))
+    (log-gtp-plot-info "rendering finished")))
 
 (define (overhead-plot pre-pi*)
   (log-gtp-plot-info "rendering overhead-plot for ~a" pre-pi*)
