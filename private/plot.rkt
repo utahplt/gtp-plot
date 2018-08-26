@@ -132,6 +132,8 @@
 (defparam *STANDARD-D* #f (or/c #f positive?))
 (defparam *TICK-GRID?* #true boolean?)
 (defparam *TYPED/UNTYPED-RATIO-XTICK?* #f Boolean)
+(defparam *EXACT-RUNTIME-BASELINE?* #f Boolean)
+(defparam *AUTO-POINT-ALPHA?* #true Boolean)
 
 ;; -----------------------------------------------------------------------------
 
@@ -150,6 +152,12 @@
   (define elem*
     (list
       (make-vrule* nt)
+      (if (*EXACT-RUNTIME-BASELINE?*)
+        (hrule (performance-info->untyped-runtime (car pi*))
+               #:color ((*BRUSH-COLOR-CONVERTER*) (- color0 1))
+               #:width 4
+               #:alpha (*INTERVAL-ALPHA*))
+        '())
       (for/list ([pi (in-list pi*)]
                  [color (in-naturals color0)]
                  [sym (make-point-symbol*)])
@@ -959,7 +967,7 @@
 
 (define (num-units->point-alpha nu)
   (cond
-   [(< nu 10)
+   [(and (*AUTO-POINT-ALPHA?*) (< nu 10))
     0.8]
    [else
     (*POINT-ALPHA*)]))
