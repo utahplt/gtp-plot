@@ -186,7 +186,7 @@
   The second form is a curried version of the first.
 }
 
-@defproc[(count-configuration [pi performance-info?] [f (-> configuration-info? any)]) natural?]{
+@defproc[(count-configurations [pi performance-info?] [f (-> configuration-info? any)]) natural?]{
   Counts the number of configurations that satisfy the given predicate.
 }
 
