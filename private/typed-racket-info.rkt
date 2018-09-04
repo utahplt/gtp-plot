@@ -33,8 +33,6 @@
     path->name)
   (only-in racket/string
     string-prefix?)
-  (only-in math/statistics
-    mean)
   (only-in racket/file
     file->value))
 
@@ -71,8 +69,8 @@
   (define v (file->value path))
   (define nc (vector-length v))
   (define nu (log2 nc))
-  (define rr (mean (vector-ref v 0)))
-  (define tr (mean (vector-ref v (- nc 1))))
+  (define rr (vector-ref v 0))
+  (define tr (vector-ref v (- nc 1)))
   (typed-racket-info
     bm-name
     path
@@ -88,8 +86,8 @@
                                        #:typed-configuration typed-config
                                        #:untyped-configuration untyped-config)
   (define num-units (typed-racket-id->num-units (configuration-info->id typed-config)))
-  (define tr (configuration-info->mean-runtime typed-config))
-  (define rr (configuration-info->mean-runtime untyped-config))
+  (define tr (configuration-info->runtime* typed-config))
+  (define rr (configuration-info->runtime* untyped-config))
   (define empty-pi
     (typed-racket-info name "dummy" num-units (expt 2 num-units) rr rr tr in-typed-racket-configurations))
   (make-sample-info empty-pi cfg**))
@@ -163,7 +161,9 @@
 ;; =============================================================================
 
 (module+ test
-  (require rackunit rackunit-abbrevs racket/runtime-path)
+  (require
+    rackunit rackunit-abbrevs racket/runtime-path
+    (only-in math/statistics mean))
 
   (define CI? (and (getenv "CI") #true))
 

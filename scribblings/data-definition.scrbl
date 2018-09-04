@@ -85,9 +85,9 @@
 @defproc[(make-performance-info [name symbol?]
                                 [#:src src path-string?]
                                 [#:num-units num-units natural?]
-                                [#:baseline-runtime baseline-runtime nonnegative-real/c]
-                                [#:untyped-runtime untyped-runtime nonnegative-real/c]
-                                [#:typed-runtime typed-runtime nonnegative-real/c]
+                                [#:baseline-runtime* baseline-runtime* (listof nonnegative-real/c)]
+                                [#:untyped-runtime* untyped-runtime (listof nonnegative-real/c)]
+                                [#:typed-runtime* typed-runtime (listof nonnegative-real/c)]
                                 [#:make-in-configurations make-in-configurations (-> performance-info? (sequence/c configuration-info?))])
          performance-info?]{
   Builds a @tech{performance info} structure for the data for a gradually-typed program.
@@ -104,14 +104,14 @@
     @racket[num-units] is the number of @tech{typeable components} in the program;
   }
   @item{
-    @racket[baseline-runtime] is the performance of the given program without any gradual typing;
+    @racket[baseline-runtime*] is the performance of the given program without any gradual typing;
   }
   @item{
-    @racket[untyped-runtime] is the performance of the program with no type annotations,
+    @racket[untyped-runtime*] is the performance of the program with no type annotations,
      this may be the same as the baseline runtime;
   }
   @item{
-    @racket[typed-runtime] is the performance of the program when fully-typed;
+    @racket[typed-runtime*] is the performance of the program when fully-typed;
   }
   @item{
     @racket[make-in-configurations] is a function that accepts a @tech{performance info}
@@ -125,6 +125,9 @@
   @defproc[(performance-info->name [pi performance-info?]) symbol?]
   @defproc[(performance-info->src [pi performance-info?]) path-string?]
   @defproc[(performance-info->num-units [pi performance-info?]) natural?]
+  @defproc[(performance-info->baseline-runtime* [pi performance-info?]) (listof nonnegative-real/c)]
+  @defproc[(performance-info->untyped-runtime* [pi performance-info?]) (listof nonnegative-real/c)]
+  @defproc[(performance-info->typed-runtime* [pi performance-info?]) (listof nonnegative-real/c)]
   @defproc[(performance-info->baseline-runtime [pi performance-info?]) nonnegative-real/c]
   @defproc[(performance-info->untyped-runtime [pi performance-info?]) nonnegative-real/c]
   @defproc[(performance-info->typed-runtime [pi performance-info?]) nonnegative-real/c]

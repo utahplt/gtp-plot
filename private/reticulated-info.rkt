@@ -20,8 +20,6 @@
   file/glob
   (only-in file/gunzip
     gunzip)
-  (only-in math/statistics
-    mean)
   (only-in racket/file
     file->value)
   (only-in racket/math
@@ -67,21 +65,21 @@
   (define name (parse-reticulated-directory-name path))
   (define num-units
     (reticulated-meta->num-units (file->reticulated-meta (build-path path (format "~a-~a" name META-SUFFIX)))))
-  (define baseline-runtime
-    (mean (file->runtime* (build-path path (format "~a-~a" name PYTHON-SUFFIX)))))
-  (define untyped-runtime
-    (mean (file->runtime* (build-path path (format "~a-~a" name UNTYPED-SUFFIX)))))
-  (define typed-runtime
-    (mean (file->runtime* (build-path path (format "~a-~a" name TYPED-SUFFIX)))))
+  (define baseline-runtime*
+    (file->runtime* (build-path path (format "~a-~a" name PYTHON-SUFFIX))))
+  (define untyped-runtime*
+    (file->runtime* (build-path path (format "~a-~a" name UNTYPED-SUFFIX))))
+  (define typed-runtime*
+    (file->runtime* (build-path path (format "~a-~a" name TYPED-SUFFIX))))
   (define ri
     (reticulated-info
       (string->symbol name)
       UNDEFINED-SRC
       num-units
       (expt num-units 2)
-      baseline-runtime
-      untyped-runtime
-      typed-runtime
+      baseline-runtime*
+      untyped-runtime*
+      typed-runtime*
       in-reticulated-configurations))
   (define cfg**
     (for/list ([sample (in-glob (build-path path SAMPLE-GLOB))])
@@ -101,7 +99,7 @@
     (scan-karst-file data-path))
   (define num-units (log2 num-configs))
   (define baseline-runtime
-    (mean (file->runtime* (build-path path (format "~a-~a" name PYTHON-SUFFIX)))))
+    (file->runtime* (build-path path (format "~a-~a" name PYTHON-SUFFIX))))
   (reticulated-info
     (string->symbol name)
     data-path
@@ -230,11 +228,11 @@
               tr
               (λ (times-str)
                 (set-box! ur
-                  (mean (string->time* times-str))))
+                  (string->time* times-str)))
               (λ (times-str)
                 (when (not (unbox tr))
                   (set-box! tr
-                    (mean (string->time* times-str))))))))
+                    (string->time* times-str)))))))
   (with-input-from-file k
     (λ ()
       (for ([ln (in-lines)])
@@ -305,7 +303,10 @@
 ;; =============================================================================
 
 (module+ test
-  (require rackunit rackunit-abbrevs racket/runtime-path racket/list)
+  (require
+    rackunit rackunit-abbrevs racket/runtime-path racket/list
+    (only-in math/statistics
+      mean))
 
   (define-runtime-path fannkuch-path "./test/fannkuch")
   (define-runtime-path espionage-path "./test/espionage")

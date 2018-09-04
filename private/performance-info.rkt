@@ -13,9 +13,9 @@
         #:src path-string?
         #:num-units natural?
         #:num-configurations natural?
-        #:baseline-runtime nonnegative-real/c
-        #:untyped-runtime nonnegative-real/c
-        #:typed-runtime nonnegative-real/c
+        #:baseline-runtime* (listof nonnegative-real/c)
+        #:untyped-runtime* (listof nonnegative-real/c)
+        #:typed-runtime* (listof nonnegative-real/c)
         #:make-in-configurations (-> performance-info? sequence?)
         performance-info?)]
 
@@ -47,6 +47,15 @@
 
    [performance-info->typed-runtime
     (-> performance-info? nonnegative-real/c)]
+
+   [performance-info->baseline-runtime*
+    (-> performance-info? (listof nonnegative-real/c))]
+
+   [performance-info->untyped-runtime*
+    (-> performance-info? (listof nonnegative-real/c))]
+
+   [performance-info->typed-runtime*
+    (-> performance-info? (listof nonnegative-real/c))]
 
    [performance-info->make-in-configurations
     (-> performance-info? any)]
@@ -138,6 +147,8 @@
     remove-duplicates)
   (only-in racket/sequence
     sequence/c)
+  (only-in math/statistics
+    mean)
   (only-in racket/math
     natural?))
 
@@ -156,9 +167,9 @@
   src
   num-units
   num-configurations
-  baseline-runtime
-  untyped-runtime
-  typed-runtime
+  baseline-runtime*
+  untyped-runtime*
+  typed-runtime*
   make-in-configurations
 ) #:transparent
   #:methods gen:custom-write
@@ -168,9 +179,9 @@
 (define (make-performance-info name #:src k
                                     #:num-units num-units
                                     #:num-configurations num-configurations
-                                    #:baseline-runtime baseline
-                                    #:untyped-runtime untyped
-                                    #:typed-runtime typed
+                                    #:baseline-runtime* baseline
+                                    #:untyped-runtime* untyped
+                                    #:typed-runtime* typed
                                     #:make-in-configurations mic)
   (performance-info name k num-units num-configurations baseline untyped typed mic))
 
@@ -186,14 +197,23 @@
 (define performance-info->num-configurations
   performance-info-num-configurations)
 
-(define performance-info->baseline-runtime
-  performance-info-baseline-runtime)
+(define performance-info->baseline-runtime*
+  performance-info-baseline-runtime*)
 
-(define performance-info->untyped-runtime
-  performance-info-untyped-runtime)
+(define performance-info->untyped-runtime*
+  performance-info-untyped-runtime*)
 
-(define performance-info->typed-runtime
-  performance-info-typed-runtime)
+(define performance-info->typed-runtime*
+  performance-info-typed-runtime*)
+
+(define (performance-info->baseline-runtime pi)
+  (mean (performance-info-baseline-runtime* pi)))
+
+(define (performance-info->untyped-runtime pi)
+  (mean (performance-info-untyped-runtime* pi)))
+
+(define (performance-info->typed-runtime pi)
+  (mean (performance-info-typed-runtime* pi)))
 
 (define performance-info->make-in-configurations
   performance-info-make-in-configurations)
@@ -203,9 +223,9 @@
                     (performance-info->src pi)
                     (performance-info->num-units pi)
                     (performance-info->num-configurations pi)
-                    (performance-info->baseline-runtime pi)
-                    (performance-info->untyped-runtime pi)
-                    (performance-info->typed-runtime pi)
+                    (performance-info->baseline-runtime* pi)
+                    (performance-info->untyped-runtime* pi)
+                    (performance-info->typed-runtime* pi)
                     (performance-info-make-in-configurations pi)))
 
 (define (performance-info-update-src pi new-src)
@@ -213,9 +233,9 @@
                     new-src
                     (performance-info->num-units pi)
                     (performance-info->num-configurations pi)
-                    (performance-info->baseline-runtime pi)
-                    (performance-info->untyped-runtime pi)
-                    (performance-info->typed-runtime pi)
+                    (performance-info->baseline-runtime* pi)
+                    (performance-info->untyped-runtime* pi)
+                    (performance-info->typed-runtime* pi)
                     (performance-info-make-in-configurations pi)))
 
 (define (performance-info-update-in-configurations pi new-ic)
@@ -223,9 +243,9 @@
                     (performance-info->src pi)
                     (performance-info->num-units pi)
                     (performance-info->num-configurations pi)
-                    (performance-info->baseline-runtime pi)
-                    (performance-info->untyped-runtime pi)
-                    (performance-info->typed-runtime pi)
+                    (performance-info->baseline-runtime* pi)
+                    (performance-info->untyped-runtime* pi)
+                    (performance-info->typed-runtime* pi)
                     new-ic))
 
 (define (performance-info*->unique-name* pi*)
@@ -341,9 +361,9 @@
                          #:src #false
                          #:num-units old-num-units
                          #:num-configurations new-num-configurations
-                         #:baseline-runtime old-baseline
-                         #:untyped-runtime old-untyped
-                         #:typed-runtime old-typed
+                         #:baseline-runtime* old-baseline
+                         #:untyped-runtime* old-untyped
+                         #:typed-runtime* old-typed
                          #:make-in-configurations in-filtered-configurations))
 
 ;; =============================================================================
@@ -358,9 +378,9 @@
                  #:src "EXAMPLE"
                  #:num-units (log2 nc)
                  #:num-configurations nc
-                 #:baseline-runtime (first t*)
-                 #:untyped-runtime (first t*)
-                 #:typed-runtime (last t*)
+                 #:baseline-runtime* (list (first t*))
+                 #:untyped-runtime* (list (first t*))
+                 #:typed-runtime* (list (last t*))
                  #:make-in-configurations (λ (pi) (for/list ([t (in-list t*)] [i (in-naturals)]) (configuration-info t i (list t)))))])
       (check-equal? (performance-info->num-configurations pi) 4)
       (check-equal? (min-overhead pi) 1/2)

@@ -43,9 +43,9 @@
                (performance-info->src pi)
                (performance-info->num-units pi)
                (performance-info->num-configurations pi)
-               (performance-info->baseline-runtime pi)
-               (performance-info->untyped-runtime pi)
-               (performance-info->typed-runtime pi)
+               (performance-info->baseline-runtime* pi)
+               (performance-info->untyped-runtime* pi)
+               (performance-info->typed-runtime* pi)
                in-sample-info-configurations
                sample-size
                ci**))
@@ -82,9 +82,9 @@
                (performance-info->src si)
                (performance-info->num-units si)
                (performance-info->num-configurations si)
-               (performance-info->baseline-runtime si)
-               (performance-info->untyped-runtime si)
-               (performance-info->typed-runtime si)
+               (performance-info->baseline-runtime* si)
+               (performance-info->untyped-runtime* si)
+               (performance-info->typed-runtime* si)
                (performance-info-make-in-configurations si)
                (sample-info-sample-size si)
                cfg**))
@@ -96,7 +96,7 @@
 
   (test-case "make-sample-info"
              (define cfg (configuration-info 'A 0 '(4 4)))
-    (define si (make-sample-info (make-performance-info 'dummy #:src "dummy" #:num-units 2 #:num-configurations 2 #:baseline-runtime 10 #:untyped-runtime 10 #:typed-runtime 10 #:make-in-configurations (lambda (x) '(a b c)))
+    (define si (make-sample-info (make-performance-info 'dummy #:src "dummy" #:num-units 2 #:num-configurations 2 #:baseline-runtime* '(10) #:untyped-runtime* '(10) #:typed-runtime* '(10) #:make-in-configurations (lambda (x) '(a b c)))
                                  (list (list cfg))))
     (check-true (sample-info? si))
     (check-true (performance-info? si))
