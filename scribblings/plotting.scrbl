@@ -88,6 +88,21 @@ For command-line options, run @exec{raco gtp-plot --help}.
   @render-demo[(parameterize ([*OVERHEAD-SHOW-RATIO* #f]) (samples-plot sample_fsm))]
 }
 
+@defproc[(relative-scatterplot [pi-x performance-info?] [pi-y performance-info?]) pict?]{
+  Plots points @math{(X, Y)} where @math{X} is the overhead of a configuration
+   in @racket[pi-x] and @math{Y} is the overhead of the same configuration in
+   @racket[pi-y].
+  Assumes @racket[pi-x] and @racket[pi-y] are two datasets for the same benchmark.
+
+  Points along the line @math{X=Y} represent configurations with equal overhead
+   in both datasets.
+  Points below the line are faster in @racket[pi-x] and points to the left of
+   the line are faster in @racket[pi-y].
+
+  @render-demo[(relative-scatterplot mbta mbta)]
+
+  @history[#:added "0.2"]
+}
 
 @section{Experimental Plotting Functions}
 
@@ -159,6 +174,12 @@ The appearance of these plots is subject to change.
 
 @defparam[*BAR-WIDTH* bar-width nonnegative-real/c #:value 0.1]{
   Controls width of bars in a @racket[discrete-overhead-plot].
+}
+
+@defparam[*DECORATIONS-COLOR* pc plot-color/c #:value 0]{
+  Sets color of some plot decorations
+
+  @history[#:added "0.2"]
 }
 
 @defparam[*FONT-SIZE* font-size exact-positive-integer? #:value 10]{

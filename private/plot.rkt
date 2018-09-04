@@ -20,6 +20,9 @@
     [samples-plot
      (-> (non-empty-treeof performance-info?) pict?)]
 
+    [relative-scatterplot
+     (-> performance-info? performance-info? pict?)]
+
     #;[discrete-samples-plot
      (-> performance-info? (listof real?) pict?)]
 
@@ -91,6 +94,7 @@
 (defparam *CLOUD-MIN-ALIGN* 'center anchor/c)
 (defparam *CLOUD-MAX-ALIGN* 'center anchor/c)
 (defparam *BRUSH-COLOR-CONVERTER* values (-> Natural Plot-Color))
+(defparam *DECORATIONS-COLOR* 0 Plot-Color)
 (defparam *PEN-COLOR-CONVERTER* values (-> Natural Plot-Color))
 (defparam *FONT-SIZE* 10 Natural)
 (defparam *INTERVAL-ALPHA* 1 Nonnegative-Real)
@@ -350,6 +354,60 @@
       base-pict)
     (log-gtp-plot-info "rendering finished")))
 
+(define (relative-scatterplot pi-x pi-y)
+  (log-gtp-plot-info "rendering relative-scatterplot for ~a and ~a" pi-x pi-y)
+  (define num-points (box 0))
+  (define point-max (box 0))
+  (define pi-name (pi2->name 'relative-scatterplot pi-x pi-y))
+  (define color0 (*POINT-COLOR*))
+  (define neutral-color (*DECORATIONS-COLOR*))
+  (define the-ticks (make-relative-scatterplot-ticks))
+  (define body (maybe-freeze
+    (parameterize ([plot-x-ticks the-ticks]
+                   [plot-y-ticks the-ticks]
+                   [plot-x-far-ticks no-ticks]
+                   [plot-y-far-ticks no-ticks]
+                   [plot-tick-size TICK-SIZE]
+                   [plot-font-face (*OVERHEAD-FONT-FACE*)]
+                   [plot-font-size (*FONT-SIZE*)])
+      (plot-pict
+        (list
+          (function values #:color neutral-color #:alpha 0.6)
+          (hrule 1 #:color neutral-color #:style 'dot #:alpha 0.4)
+          (vrule 1 #:color neutral-color #:style 'dot #:alpha 0.4)
+          (let ([x-overhead (overhead pi-x)]
+                [y-overhead (overhead pi-y)])
+            (points
+              (for/list ([x-cfg (in-configurations pi-x)]
+                         [y-cfg (in-configurations pi-y)])
+                (define x-id (configuration-info->id x-cfg))
+                (define y-id (configuration-info->id y-cfg))
+                (unless (equal? x-id y-id)
+                  (raise-arguments-error 'relative-scatterplot "two datasets for same configurations" "cfg-x" x-id "cfg-y" y-id "pi-x" pi-x "pi-y" pi-y))
+                (define x-t (x-overhead (configuration-info->mean-runtime x-cfg)))
+                (define y-t (x-overhead (configuration-info->mean-runtime y-cfg)))
+                (void
+                  (set-box! num-points (+ 1 (unbox num-points)))
+                  (set-box! point-max (max (unbox point-max) x-t y-t)))
+                (vector x-t y-t))
+              #:sym (*POINT-SYMBOL*)
+              #:size (*POINT-SIZE*)
+              #:alpha (*POINT-ALPHA*)
+              #:color (->pen-color color0)
+              #:fill-color (->brush-color color0))))
+        #:x-min 0
+        #:x-max (unbox point-max)
+        #:y-min 0
+        #:y-max (unbox point-max)
+        #:x-label #f
+        #:y-label #f
+        #:width (*OVERHEAD-PLOT-WIDTH*)
+        #:height (*OVERHEAD-PLOT-WIDTH*)))))
+  (define base-pict
+    (exact-add-legend pi-name (unbox num-points) body))
+  (log-gtp-plot-info "rendering finished")
+  base-pict)
+
 (define (discrete-samples-plot pi D*)
   (discrete-overhead-plot pi D*))
 
@@ -388,12 +446,7 @@
     (log-gtp-plot-info "rendering finished")))
 
 (define (relative-overhead-cdf pi-0 pi-1)
-  (define bm
-    (let ([name-0 (performance-info->name pi-0)]
-          [name-1 (performance-info->name pi-1)])
-      (if (eq? name-0 name-1)
-        name-0
-        (raise-arguments-error 'relative-overhead-cdf "expected performance-info for the same benchmark" "pi-0" pi-0 "pi-1" pi-1))))
+  (define bm (pi2->name 'relative-overhead-cdf pi-0 pi-1))
   (define config->t0+t1
     #;(for/list ([cfg0 (in-configurations pi-0)]
                [cfg1 (in-configurations pi-1)])
@@ -867,6 +920,28 @@
       (format "~a~a" (rnd+ v) units)
       (rnd+ v))))
 
+(define (make-relative-scatterplot-ticks)
+  (define unit-str "x")
+  (define start-val 1)
+  (define (normalize-val x)
+    (cond
+      [(< (abs (- x start-val)) 0.00001)
+       start-val]
+      [(< x 10)
+       (rnd x)]
+      [else
+       (exact-floor x)]))
+  (ticks (lambda (ax-min ax-max)
+           (for/list ([x (in-list (list (max start-val ax-min) ax-max))])
+             (pre-tick x #true)))
+         (lambda (ax-min ax-max pre-ticks)
+           (for/list ([pt (in-list pre-ticks)])
+             (define raw-v (pre-tick-value pt))
+             (define v (normalize-val raw-v))
+             (if (= raw-v ax-max)
+               (format "~a~a" v unit-str)
+               (format "~a" v))))))
+
 (define (overhead-add-legend pi pict)
   (define name (render-benchmark-name (performance-info->name pi)))
   (define tp-ratio
@@ -989,6 +1064,13 @@
     [else
      (raise-argument-error 'in-colors "color?" c)]))
 
+(define (pi2->name where pi-0 pi-1)
+  (let ([name-0 (performance-info->name pi-0)]
+        [name-1 (performance-info->name pi-1)])
+    (if (eq? name-0 name-1)
+      name-0
+      (raise-arguments-error where "expected performance-info for the same benchmark" "pi-0" pi-0 "pi-1" pi-1))))
+
 ;; =============================================================================
 
 (module+ test
@@ -1043,8 +1125,11 @@
   (test-case "relative-overhead-cdf"
     (check-true (pict? (relative-overhead-cdf fsm fsm))))
 
-  #;(test-case "validate-samples-plot"
-    (check-true (pict? (validate-samples-plot espionage))))
+  (test-case "relative-scatterplot"
+    (check-true (pict? (relative-scatterplot espionage espionage))))
+
+  ;(test-case "validate-samples-plot"
+  ; (check-true (pict? (validate-samples-plot espionage))))
 
   (test-case "length=2"
     (check-true (length=2 '(A B)))
@@ -1057,5 +1142,10 @@
                   '(5 6 7))
     (check-equal? (sequence-take (in-colors "green") 3)
                   '("green" 4 5)))
+
+  (test-case "pi2->name"
+    (check-equal? (pi2->name 'test-case espionage espionage) 'espionage)
+    (check-exn exn:fail:contract?
+      (lambda () (pi2->name 'test-case espionage fsm))))
 )
 
