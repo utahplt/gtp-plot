@@ -10,6 +10,7 @@
     gtp-plot/util
     racket/base
     racket/contract
+    (only-in racket/sequence sequence/c)
     (only-in racket/math natural?))]
 
 @title[#:tag "gtp-data-definition"]{Data Definitions}
