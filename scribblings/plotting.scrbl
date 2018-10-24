@@ -219,6 +219,10 @@ The appearance of these plots is subject to change.
   This is useful for plots with a large number of elements.
 }
 
+@defparam[*OVERHEAD-LEGEND?* show-legend? boolean? #:value #true]{
+  When @racket[#false], hide dataset name and axis labels.
+}
+
 @defparam[*OVERHEAD-LINE-COLOR* line-color plot-color/c #:value 3]{
   Sets color of solid lines used in plots.
 }

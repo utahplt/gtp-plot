@@ -105,6 +105,7 @@
 (defparam *MULTI-INTERVAL-STYLE* #f (or/c #f plot-brush-style/c (listof plot-brush-style/c)))
 (defparam *LEGEND-HSPACE* 20 Pict-Units)
 (defparam *LEGEND-VSPACE* 10 Pict-Units)
+(defparam *OVERHEAD-LEGEND?* #true Boolean)
 (defparam *LEGEND?* #true Boolean)
 (defparam *GRID-X* 600 Natural)
 (defparam *GRID-Y* 1300 Natural)
@@ -210,13 +211,14 @@
 (define (overhead-plot pre-pi*)
   (log-gtp-plot-info "rendering overhead-plot for ~a" pre-pi*)
   ;; TODO use standard-D
+  (define legend? (*OVERHEAD-LEGEND?*))
   (define multi? (pair? pre-pi*))
   (define pi* (if multi? (flatten pre-pi*) (list pre-pi*)))
   (define color0 (*OVERHEAD-LINE-COLOR*))
   (define body (maybe-freeze
-    (parameterize ([plot-x-ticks (make-overhead-x-ticks)]
+    (parameterize ([plot-x-ticks (if legend? (make-overhead-x-ticks) no-ticks)]
                    [plot-x-transform log-transform]
-                   [plot-y-ticks (make-overhead-y-ticks)]
+                   [plot-y-ticks (if legend? (make-overhead-y-ticks) no-ticks)]
                    [plot-x-far-ticks no-ticks]
                    [plot-y-far-ticks no-ticks]
                    [plot-tick-size TICK-SIZE]
@@ -247,7 +249,7 @@
     ;; TODO don't just use car
     (overhead-add-legend (car pi*) body))
   (begin0
-    (if (and multi? (*LEGEND?*))
+    (if (and multi? legend?)
       (add-color-legend base-pict (make-color-legend pi* color0))
       base-pict)
     (log-gtp-plot-info "rendering finished")))
@@ -943,15 +945,18 @@
                (format "~a" v))))))
 
 (define (overhead-add-legend pi pict)
-  (define name (render-benchmark-name (performance-info->name pi)))
-  (define tp-ratio
-    (if (*OVERHEAD-SHOW-RATIO*)
-      (render-typed/baseline-ratio (typed/baseline-ratio pi))
-      (blank 0 0)))
-  (define nc (render-count (performance-info->num-configurations pi) "configurations"))
-  (add-legend (hb-append (*LEGEND-HSPACE*) name tp-ratio)
-              pict
-              nc))
+  (if (*OVERHEAD-LEGEND?*)
+    (let ()
+      (define name (render-benchmark-name (performance-info->name pi)))
+      (define tp-ratio
+        (if (*OVERHEAD-SHOW-RATIO*)
+          (render-typed/baseline-ratio (typed/baseline-ratio pi))
+          (blank 0 0)))
+      (define nc (render-count (performance-info->num-configurations pi) "configurations"))
+      (add-legend (hb-append (*LEGEND-HSPACE*) name tp-ratio)
+                  pict
+                  nc))
+    pict))
 
 (define (exact-add-legend bm-name num-points pict)
   (define name (render-benchmark-name bm-name))
