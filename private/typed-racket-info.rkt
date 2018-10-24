@@ -63,9 +63,7 @@
                (regexp-match? NON-SPACE-NON-RPAREN (current-input-port)))))))
 
 (define (make-typed-racket-info path #:name [name #f])
-  (define bm-name (or name
-                      (string->symbol (parse-typed-racket-filename path))
-                      (string->symbol (path->name path))))
+  (define bm-name (->bm-name name path))
   (define v (file->value path))
   (define nc (vector-length v))
   (define nu (log2 nc))
@@ -157,6 +155,12 @@
        (= 0
           (configuration-info->num-types tc)
           (typed-racket-id->num-types (configuration-info->id tc)))))
+
+(define (->bm-name name path)
+  (or name
+      (let ((n (parse-typed-racket-filename path)))
+        (and n (string->symbol n)))
+      (string->symbol (path->name path))))
 
 ;; =============================================================================
 
@@ -384,4 +388,9 @@
                   [cfg (in-list cfg*)])
         (configuration-info->id cfg)))
     (void))
+
+  (test-case "->bm-name"
+    (check-equal? (->bm-name 'A #f) 'A)
+    (check-equal? (->bm-name #f "foo/fsm-v6.4.rktd") 'fsm)
+    (check-equal? (->bm-name #f "hello-x.rktd") 'hello-x))
 )
