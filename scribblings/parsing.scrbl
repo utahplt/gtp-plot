@@ -3,6 +3,7 @@
 @require[
   gtp-plot/reticulated-info
   gtp-plot/typed-racket-info
+  scribble/example
   (for-label
     gtp-plot/configuration-info
     gtp-plot/performance-info
@@ -13,6 +14,8 @@
     racket/base
     racket/contract
     (only-in racket/math natural?))]
+
+@(define tr-info-eval (make-base-eval '(require gtp-plot/typed-racket-info)))
 
 @; -----------------------------------------------------------------------------
 @title[#:tag "data-formats"]{Data Formats}
@@ -57,6 +60,17 @@
   Predicate for Typed Racket datasets.
 }
 
+@defproc[(typed-racket-id? [x any/c]) boolean?]{
+  Predicate for a Typed Racket configuration name.
+
+  @examples[#:eval tr-info-eval
+    (typed-racket-id? "0000")
+    (typed-racket-id? "001000011")
+    (typed-racket-id? "2001")
+    (typed-racket-id? 10)
+  ]
+}
+
 @defproc[(make-typed-racket-sample-info [src (listof typed-racket-info?)]
                                         [#:name name symbol?]
                                         [#:typed-configuration tc typed-configuration-info?]
@@ -75,11 +89,11 @@
   Predicate for a Typed Racket configuration.
 }
 
-@defproc[(typed-configuration-info? [tc typed-racket-configuration-info?]) boolean?]{
+@defproc[(typed-configuration-info? [x any/c]) boolean?]{
   Predicate for a fully-typed Typed Racket configuration.
 }
 
-@defproc[(untyped-configuration-info? [uc untyped-racket-configuration-info?]) boolean?]{
+@defproc[(untyped-configuration-info? [x any/c]) boolean?]{
   Predicate for an untyped Typed Racket configuration.
 }
 

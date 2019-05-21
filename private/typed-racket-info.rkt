@@ -7,6 +7,8 @@
     (-> any/c any)]
    [typed-racket-info?
     (-> any/c any)]
+   [typed-racket-id?
+    (-> any/c any)]
    [make-typed-racket-info
     (->* [typed-racket-data?] [#:name (or/c #f symbol?)] performance-info?)]
    [make-typed-racket-sample-info
