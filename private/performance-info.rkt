@@ -309,7 +309,7 @@
   (define 1/N (/ 1 (performance-info->num-configurations pi)))
   (define (avg acc v)
     (+ acc (* 1/N v)))
-  (overhead pi (fold/mean-runtime pi avg #:init (λ (v) (* 1/N v)))))
+  (overhead pi (fold/mean-runtime pi avg #:init (λ (v) 0))))
 
 (define (min-overhead pi)
   (overhead pi (fold/mean-runtime pi min)))
@@ -385,7 +385,7 @@
       (check-equal? (performance-info->num-configurations pi) 4)
       (check-equal? (min-overhead pi) 1/2)
       (check-equal? (max-overhead pi) 2)
-      (check-equal? (mean-overhead pi) 11/8)
+      (check-equal? (mean-overhead pi) 9/8)
       (check-equal? (typed/untyped-ratio pi) 1)
       (check-equal? ((deliverable 1.8) pi) 4)
       (let ([pi%0 (filter-performance-info pi (lambda (cfg) (zero? (configuration-info->num-types cfg))))])
