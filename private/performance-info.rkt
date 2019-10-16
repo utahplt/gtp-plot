@@ -146,8 +146,7 @@
     group-by
     remove-duplicates)
   (only-in racket/sequence
-    sequence/c
-    sequence-map)
+    sequence/c)
   (only-in math/statistics
     mean)
   (only-in racket/math
@@ -269,12 +268,15 @@
       (λ (v) (/ v baseline)))]))
 
 ;; fold-configurations : (All (A) performance-info? (-> A B A) #:init (U #f (-> B A)) #:transform (U #f (-> Configuration B) -> A)
-(define (fold-configurations pi f #:init [init-f #f] #:transform [trans-f #f])
+(define (fold-configurations pi f #:init [pre-init-f #f] #:transform [pre-trans-f #f])
+  (define init-f (or pre-init-f values))
+  (define trans-f (or pre-trans-f values))
   (for/fold ([acc (void)])
-            ([cfg (sequence-map (or trans-f values) (in-configurations pi))]
+            ([pre-cfg (in-configurations pi)]
              [first? (in-sequences (in-value #t) (in-cycle (in-value #f)))])
+    (define cfg (trans-f pre-cfg))
     (if first?
-      (if init-f (init-f cfg) cfg)
+      (init-f cfg)
       (f acc cfg))))
 
 (define (fold/mean-runtime pi f #:init [init-f #f])
