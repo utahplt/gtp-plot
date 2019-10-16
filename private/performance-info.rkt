@@ -147,6 +147,10 @@
     remove-duplicates)
   (only-in racket/sequence
     sequence/c)
+  (only-in racket/stream
+    stream-first
+    stream-rest
+    stream-empty?)
   (only-in math/statistics
     mean)
   (only-in racket/math
@@ -269,15 +273,14 @@
 
 ;; fold-configurations : (All (A) performance-info? (-> A B A) #:init (U #f (-> B A)) #:transform (U #f (-> Configuration B) -> A)
 (define (fold-configurations pi f #:init [init-f #f] #:transform [trans-f #f])
-  (define gen (in-configurations pi))
-  (define init
-    (for/first ([cfg gen])
-      (if trans-f
-        (trans-f cfg)
-        cfg)))
-  (for/fold ([acc (if init-f (init-f init) init)])
-            ([cfg gen])
-    (f acc (if trans-f (trans-f cfg) cfg))))
+  (define cfg-stream (sequence->stream (in-configurations pi)))
+  (if (stream-empty? cfg-stream)
+      #f
+      (let* ([init-cfg (stream-first cfg-stream)]
+             [init (if trans-f (trans-f init-cfg) init-cfg)])
+        (for/fold ([acc (if init-f (init-f init) init)])
+                  ([cfg (stream-rest cfg-stream)])
+          (f acc (if trans-f (trans-f cfg) cfg))))))
 
 (define (fold/mean-runtime pi f #:init [init-f #f])
   (fold-configurations pi f #:init init-f #:transform configuration-info->mean-runtime))
@@ -385,9 +388,9 @@
       (check-equal? (performance-info->num-configurations pi) 4)
       (check-equal? (min-overhead pi) 1/2)
       (check-equal? (max-overhead pi) 2)
-      (check-equal? (mean-overhead pi) 11/8)
+      (check-equal? (mean-overhead pi) 9/8)
       (check-equal? (typed/untyped-ratio pi) 1)
-      (check-equal? ((deliverable 1.8) pi) 4)
+      (check-equal? ((deliverable 1.8) pi) 3)
       (let ([pi%0 (filter-performance-info pi (lambda (cfg) (zero? (configuration-info->num-types cfg))))])
         (check-not-equal? (performance-info->name pi) (performance-info->name pi%0))
         (check-false (performance-info->src pi%0))
