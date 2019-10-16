@@ -146,11 +146,8 @@
     group-by
     remove-duplicates)
   (only-in racket/sequence
-    sequence/c)
-  (only-in racket/stream
-    stream-first
-    stream-rest
-    stream-empty?)
+    sequence/c
+    sequence-map)
   (only-in math/statistics
     mean)
   (only-in racket/math
@@ -273,14 +270,12 @@
 
 ;; fold-configurations : (All (A) performance-info? (-> A B A) #:init (U #f (-> B A)) #:transform (U #f (-> Configuration B) -> A)
 (define (fold-configurations pi f #:init [init-f #f] #:transform [trans-f #f])
-  (define cfg-stream (sequence->stream (in-configurations pi)))
-  (if (stream-empty? cfg-stream)
-      #f
-      (let* ([init-cfg (stream-first cfg-stream)]
-             [init (if trans-f (trans-f init-cfg) init-cfg)])
-        (for/fold ([acc (if init-f (init-f init) init)])
-                  ([cfg (stream-rest cfg-stream)])
-          (f acc (if trans-f (trans-f cfg) cfg))))))
+  (for/fold ([acc (void)])
+            ([cfg (sequence-map (or trans-f values) (in-configurations pi))]
+             [first? (in-sequences (in-value #t) (in-cycle (in-value #f)))])
+    (if first?
+      (if init-f (init-f cfg) cfg)
+      (f acc cfg))))
 
 (define (fold/mean-runtime pi f #:init [init-f #f])
   (fold-configurations pi f #:init init-f #:transform configuration-info->mean-runtime))
@@ -377,28 +372,55 @@
   (test-case "benchmark->performance-info:example-data"
     (let* ([t* '(2 1 4 2)]
            [nc (length t*)]
-           [pi (make-performance-info 'example
-                 #:src "EXAMPLE"
+           [make-list-seq
+             (λ (pi) (for/list ([t (in-list t*)] [i (in-naturals)]) (configuration-info t i (list t))))]
+           [make-fn-seq
+             (λ (pi)
+               (define cfg* (make-list-seq pi))
+               (define *i (box 0))
+               (define (gen)
+                 (define i (unbox *i))
+                 (begin0
+                   (and (< i nc) (list-ref cfg* i))
+                   (set-box! *i (+ i 1))))
+               (in-producer gen #f))]
+           [pi/list
+             ;; configurations in a list
+             (make-performance-info 'example
+               #:src "EXAMPLE"
+               #:num-units (log2 nc)
+               #:num-configurations nc
+               #:baseline-runtime* (list (first t*))
+               #:untyped-runtime* (list (first t*))
+               #:typed-runtime* (list (last t*))
+               #:make-in-configurations make-list-seq)]
+           [pi/fn
+             ;; configurations in a stateful producer
+             (make-performance-info 'example/state
+                 #:src "EXAMPLE/STATE"
                  #:num-units (log2 nc)
                  #:num-configurations nc
                  #:baseline-runtime* (list (first t*))
                  #:untyped-runtime* (list (first t*))
                  #:typed-runtime* (list (last t*))
-                 #:make-in-configurations (λ (pi) (for/list ([t (in-list t*)] [i (in-naturals)]) (configuration-info t i (list t)))))])
-      (check-equal? (performance-info->num-configurations pi) 4)
-      (check-equal? (min-overhead pi) 1/2)
-      (check-equal? (max-overhead pi) 2)
-      (check-equal? (mean-overhead pi) 9/8)
-      (check-equal? (typed/untyped-ratio pi) 1)
-      (check-equal? ((deliverable 1.8) pi) 3)
-      (let ([pi%0 (filter-performance-info pi (lambda (cfg) (zero? (configuration-info->num-types cfg))))])
-        (check-not-equal? (performance-info->name pi) (performance-info->name pi%0))
-        (check-false (performance-info->src pi%0))
-        (check-equal? (list (configuration-info (car t*) 0 (list (car t*))))
-                      (for/list ([cfg (in-configurations pi%0)]) cfg)))
-      (check-not-exn
-        (lambda () (performance-info-update-name pi 'yo)))
-      (check-not-exn
-        (lambda () (performance-info-update-src pi #false)))
+                 #:make-in-configurations make-fn-seq)])
+      (define (run-tests pi)
+        (check-equal? (performance-info->num-configurations pi) 4)
+        (check-equal? (min-overhead pi) 1/2)
+        (check-equal? (max-overhead pi) 2)
+        (check-equal? (mean-overhead pi) (mean (map (let ((baseline (car t*))) (lambda (i) (/ i baseline))) t*)))
+        (check-equal? (typed/untyped-ratio pi) 1)
+        (check-equal? ((deliverable 1.8) pi) 3)
+        (let ([pi%0 (filter-performance-info pi (lambda (cfg) (zero? (configuration-info->num-types cfg))))])
+          (check-not-equal? (performance-info->name pi) (performance-info->name pi%0))
+          (check-false (performance-info->src pi%0))
+          (check-equal? (list (configuration-info (car t*) 0 (list (car t*))))
+                        (for/list ([cfg (in-configurations pi%0)]) cfg)))
+        (check-not-exn
+          (lambda () (performance-info-update-name pi 'yo)))
+        (check-not-exn
+          (lambda () (performance-info-update-src pi #false))))
+      (run-tests pi/list)
+      (run-tests pi/fn)
       (void)))
 )
