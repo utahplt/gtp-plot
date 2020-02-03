@@ -137,11 +137,11 @@
   where:
   @itemlist[
   @item{
+    @margin-note{Wikipedia: @hyperlink["https://en.wikipedia.org/wiki/Mixed_radix"]{mixed-radix number}}
     @tt{ID} is a hyphen-separated sequence of digits.
     These represent a configuration as a @emph{mixed-radix number};
      the radix of position @math{k} is the number of @tech{typeable components}
      in module @math{k} of the program.
-    @margin-note{Wikipedia: @hyperlink["https://en.wikipedia.org/wiki/Mixed_radix"]{mixed-radix number}}
   }
   @item{
     @tt{NUM-TYPES} is a natural number, and
