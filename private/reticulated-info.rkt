@@ -44,6 +44,17 @@
 
 (define UNDEFINED-SRC "AMBIGUOUS")
 
+(define (mk-exists?/log f str)
+  (lambda (fn)
+    (if (f fn)
+      #t
+      (begin
+        (log-gtp-plot-warning "~a '~a' does not exist" str fn)
+        #f))))
+
+(define file-exists?/log (mk-exists?/log file-exists? "file"))
+(define directory-exists?/log (mk-exists?/log directory-exists? "directory"))
+
 (struct reticulated-info performance-info ()
   #:transparent
   #:methods gen:custom-write
@@ -52,7 +63,7 @@
 
 (define (reticulated-data? path)
   (and (path-string? path)
-       (directory-exists? path)
+       (directory-exists?/log path)
        (or (reticulated-exhaustive-directory? path)
            (reticulated-sample-directory? path))))
 
@@ -141,9 +152,9 @@
     (build-path path (format "~a~a" name DATA-SUFFIX)))
   (define data-path-zip
     (build-path path (format "~a~a.gz" name DATA-SUFFIX)))
-  (and (file-exists? python-path)
-       (or (file-exists? data-path)
-           (file-exists? data-path-zip))))
+  (and (file-exists?/log python-path)
+       (or (file-exists?/log data-path)
+           (file-exists?/log data-path-zip))))
 
 (define (reticulated-sample-directory? path)
   (define name (parse-reticulated-directory-name path))
@@ -157,10 +168,10 @@
     (build-path path (format "~a-~a" name META-SUFFIX)))
   (define samples
     (glob (build-path path SAMPLE-GLOB)))
-  (and (file-exists? python-path)
-       (file-exists? untyped-path)
-       (file-exists? typed-path)
-       (file-exists? meta-path)
+  (and (file-exists?/log python-path)
+       (file-exists?/log untyped-path)
+       (file-exists?/log typed-path)
+       (file-exists?/log meta-path)
        (not (null? samples))))
 
 (define (parse-reticulated-directory-name path)
