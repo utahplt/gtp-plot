@@ -7,6 +7,9 @@
   (and/c (not/c null?) (treeof x)))
 (provide
   axis/c
+
+  make-grace-bars ;; TODO
+
   (contract-out
     [cloud-plot
      (-> performance-info? pict?)]
@@ -90,6 +93,7 @@
 (defparam *CACHE-SIZE* (expt 2 16) Natural) ;; max num. configs to store in memory
 (defparam *CONFIDENCE-LEVEL* 95 Percent)
 (defparam *CONFIGURATION-X-JITTER* 0.4 Real)
+(defparam *CONFIGURATION->STYLE* (lambda (_x _y) #hash()) (-> Natural Configuration Plot-Color))
 (defparam *CLOUD-COLOR-WHEEL* '("skyblue" "slategray" "darkslateblue" "black") (listof plot-color/c))
 (defparam *CLOUD-MIN-ALIGN* 'center anchor/c)
 (defparam *CLOUD-MAX-ALIGN* 'center anchor/c)
@@ -144,19 +148,20 @@
 
 (define (exact-runtime-plot pre-pi*)
   (log-gtp-plot-info "rendering exact-runtime-plot for ~a" pre-pi*)
-  ;; TODO use standard-D
   (define multi? (pair? pre-pi*))
   (define pi* (if multi? (flatten pre-pi*) (list pre-pi*)))
-  (define nt (or (check= (map performance-info->num-units pi*))
-                 (raise-arguments-error 'exact-runtime-plot "incompatible performance-info structures" "pi*" pi*)))
-  (define size/num-units (num-units->point-size nt))
-  (define alpha/num-units (num-units->point-alpha nt))
+  (define num-units
+    (or (check= (map performance-info->num-units pi*))
+        (raise-arguments-error 'exact-runtime-plot "incompatible performance-info structures" "pi*" pi*)))
+  (define size/num-units (num-units->point-size num-units))
+  (define alpha/num-units (num-units->point-alpha num-units))
   (define max-runtime (box 0))
   (define num-points (box 0))
   (define color0 (*POINT-COLOR*))
+  (define cfg->style (*CONFIGURATION->STYLE*))
   (define elem*
     (list
-      (make-vrule* nt)
+      (make-vrule* num-units)
       (if (*EXACT-RUNTIME-BASELINE?*)
         (hrule (performance-info->untyped-runtime (car pi*))
                #:color ((*BRUSH-COLOR-CONVERTER*) (- color0 1))
@@ -164,9 +169,10 @@
                #:alpha (*INTERVAL-ALPHA*))
         '())
       (for/list ([pi (in-list pi*)]
-                 [color (in-naturals color0)]
+                 [pi-index (in-naturals 0)]
                  [sym (make-point-symbol*)])
-        (parameterize ([*POINT-COLOR* color]
+        (define pi-color (+ pi-index color0))
+        (parameterize ([*POINT-COLOR* pi-color]
                        [*POINT-SIZE* size/num-units]
                        [*POINT-ALPHA* alpha/num-units]
                        [*POINT-SYMBOL* sym])
@@ -174,17 +180,23 @@
                     ([cfg (in-configurations pi)])
             (define num-types (configuration-info->num-types cfg))
             (define t* (configuration-info->runtime* cfg))
+            (define pt**
+              (for/list ([t (in-list t*)]
+                         [x (in-list (linear-seq (- num-types (*CONFIGURATION-X-JITTER*)) (+ num-types (*CONFIGURATION-X-JITTER*)) (length t*)))])
+                (set-box! max-runtime (max (unbox max-runtime) t))
+                (set-box! num-points (+ (unbox num-points) 1))
+                (list x t)))
+            (define cfg-style (cfg->style pi-index cfg))
             (cons
-              (configuration-points
-                (for/list ([t (in-list t*)]
-                           [x (in-list (linear-seq (- num-types (*CONFIGURATION-X-JITTER*)) (+ num-types (*CONFIGURATION-X-JITTER*)) (length t*)))])
-                  (set-box! max-runtime (max (unbox max-runtime) t))
-                  (set-box! num-points (+ (unbox num-points) 1))
-                  (list x t)))
+              (points pt**
+                      #:alpha (hash-ref cfg-style 'alpha (*POINT-ALPHA*))
+                      #:color (hash-ref cfg-style 'color (*POINT-COLOR*))
+                      #:size (hash-ref cfg-style 'size (*POINT-SIZE*))
+                      #:sym (hash-ref cfg-style 'sym (*POINT-SYMBOL*)))
               acc))))))
   (define y-max (exact-ceiling (unbox max-runtime)))
   (define body (maybe-freeze
-    (parameterize ([plot-x-ticks (make-exact-runtime-xticks nt)]
+    (parameterize ([plot-x-ticks (make-exact-runtime-xticks num-units)]
                    [plot-y-ticks (make-exact-runtime-yticks y-max)]
                    [plot-x-far-ticks no-ticks]
                    [plot-y-far-ticks no-ticks]
@@ -193,7 +205,7 @@
                    [plot-font-size (*FONT-SIZE*)])
       (plot-pict elem*
         #:x-min (- 0 0.5)
-        #:x-max (+ nt 0.5)
+        #:x-max (+ num-units 0.5)
         #:y-min 0
         #:y-max y-max
         #:x-label (and (*OVERHEAD-LABEL?*) "Num. Typed Units")
@@ -283,6 +295,60 @@
     (overhead-add-legend pi body))
   (begin0
     (if (*LEGEND?*)
+      (add-color-legend base-pict (make-color-legend (list pi) (*OVERHEAD-LINE-COLOR*)))
+      base-pict)
+    (log-gtp-plot-info "rendering finished")))
+
+(define (make-grace-bars pi)
+  ;; TODO generalize ... 
+  ;;(log-gtp-plot-info "rendering discrete-overhead-plot for ~a at ~a" pi D*)
+  (define color0 (if (sample-info? pi) (*SAMPLE-COLOR*) (*OVERHEAD-LINE-COLOR*)))
+  (define num-units (performance-info->num-units pi))
+  (define bar-width 4)
+  (define bar-offset 1)
+  (define cfg->style (*CONFIGURATION->STYLE*))
+  (define *y-min (box #f))
+  (define *y-max (box #f))
+  (define body (maybe-freeze
+    (parameterize ([plot-x-ticks no-ticks]
+                    #;[plot-y-ticks (make-overhead-y-ticks)]
+                   [plot-x-far-ticks no-ticks]
+                   [plot-y-far-ticks no-ticks]
+                   [plot-y-transform log-transform]
+                   [plot-tick-size TICK-SIZE]
+                   [plot-font-face (*OVERHEAD-FONT-FACE*)]
+                   [plot-font-size (*FONT-SIZE*)]
+                   [*POINT-COLOR* color0])
+      (plot-pict
+        (list
+          (for/list ((cfg (in-configurations pi))
+                     (i (in-naturals)))
+            (define style (cfg->style 0 cfg))
+            (define y-val (overhead pi (configuration-info->mean-runtime cfg)))
+            (void
+              (when (or (not (unbox *y-min)) (< y-val (unbox *y-min))) (set-box! *y-min y-val))
+              (when (or (not (unbox *y-max)) (< (unbox *y-max) y-val)) (set-box! *y-max y-val)))
+            (define x-val (* bar-width i))
+            ;; TODO label (configuration-info->id cfg)
+            (rectangles
+              (list (vector (ivl (+ bar-offset x-val) (+ x-val bar-width)) (ivl 0 y-val)))
+              #:alpha (hash-ref style 'alpha (*INTERVAL-ALPHA*))
+              #:color (hash-ref style 'color (*POINT-COLOR*))
+            ))
+          (hrule 1 #:color 0 #:width 2 #:alpha 0.6))
+        #:x-min 0
+        #:x-max (+ bar-offset (* num-units bar-width))
+        #:y-min (let loop ((acc 0.5) (y-min (unbox *y-min))) (if (< acc y-min) acc (loop (/ acc 2) y-min)))
+        #:y-max (+ (unbox *y-min) (unbox *y-max))
+        #:x-label (and (*OVERHEAD-LABEL?*) "Config")
+        #:y-label (and (*OVERHEAD-LABEL?*) "Overhead")
+        #:width (*OVERHEAD-PLOT-WIDTH*)
+        #:height (*OVERHEAD-PLOT-HEIGHT*)))))
+  (define base-pict
+    (overhead-add-legend pi body))
+  (begin0
+    base-pict
+    #;(if (*LEGEND?*)
       (add-color-legend base-pict (make-color-legend (list pi) (*OVERHEAD-LINE-COLOR*)))
       base-pict)
     (log-gtp-plot-info "rendering finished")))
@@ -627,13 +693,6 @@
       (if (*OVERHEAD-FREEZE-BODY*)
         (scale (freeze (scale p SCALE-FACTOR)) (/ 1 SCALE-FACTOR))
         p))))
-
-(define (configuration-points p**)
-  (points p**
-    #:color ((*BRUSH-COLOR-CONVERTER*) (*POINT-COLOR*))
-    #:alpha (*POINT-ALPHA*)
-    #:sym (*POINT-SYMBOL*)
-    #:size (*POINT-SIZE*)))
 
 (define (make-vrule* count)
   (for/list ([i (in-range (+ 1 count))])
