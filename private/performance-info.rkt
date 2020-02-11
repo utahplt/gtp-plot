@@ -346,11 +346,7 @@
   (void))
 
 (define (filter-performance-info pi keep-cfg?)
-  (define old-name (performance-info->name pi))
-  (define old-num-units (performance-info->num-units pi))
-  (define old-baseline (performance-info->baseline-runtime pi))
-  (define old-untyped (performance-info->untyped-runtime pi))
-  (define old-typed (performance-info->typed-runtime pi))
+  (define old-name (performance-info-name pi))
   ;; old -> new
   (define new-name (string->symbol (format "~a%~a" old-name (object-name keep-cfg?))))
   (define-values [new-num-configurations in-filtered-configurations]
@@ -359,11 +355,11 @@
               (lambda (_pi) cfg*))))
   (make-performance-info new-name
                          #:src #false
-                         #:num-units old-num-units
+                         #:num-units (performance-info-num-units pi)
                          #:num-configurations new-num-configurations
-                         #:baseline-runtime* old-baseline
-                         #:untyped-runtime* old-untyped
-                         #:typed-runtime* old-typed
+                         #:baseline-runtime* (performance-info-baseline-runtime* pi)
+                         #:untyped-runtime* (performance-info-untyped-runtime* pi)
+                         #:typed-runtime* (performance-info-typed-runtime* pi)
                          #:make-in-configurations in-filtered-configurations))
 
 ;; =============================================================================
