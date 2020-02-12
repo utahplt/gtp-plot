@@ -8,6 +8,10 @@
     (-> any/c any)]
    [reticulated-info?
     (-> any/c any)]
+   [reticulated-id?
+     (-> any/c any)]
+   [reticulated-id<?
+     (-> any/c any/c any)]
    [make-reticulated-info
     (-> reticulated-data? performance-info?)]))
 
@@ -251,7 +255,7 @@
           (let ([ln-info (parse-line ln)])
             (values (car ln-info) (caddr ln-info))))
         (num-configs++)
-        (define cfg/mod* (string->configuration cfg-str))
+        (define cfg/mod* (string->reticulated-id cfg-str))
         (define prev-cfg* (unbox configs/module*))
         (update-configs/module* cfg/mod*)
         (when (typed-configuration? cfg/mod*)
@@ -281,7 +285,7 @@
 (define (parse-configuration ln line-number)
   (with-handlers ([exn:fail:read? (λ (e) (log-gtp-plot-error "PARSE ERROR on line ~a" line-number) (raise e))])
     (define str* (parse-line ln))
-    (define cfg (string->configuration (car str*)))
+    (define cfg (string->reticulated-id (car str*)))
     (define nt (string->num-types (cadr str*)))
     (define t* (string->time* (caddr str*)))
     (configuration-info cfg nt t*)))
@@ -299,9 +303,9 @@
   (let ([sp (open-input-string (string-replace times-str "," ""))])
     (begin0 (read sp) (close-input-port sp))))
 
-(define (string->configuration cfg-str)
+(define (string->reticulated-id cfg-str [who 'string->reticulated-id])
   (define (arg-error)
-    (raise-argument-error 'string->configuration "string of hyphen-separated natural numbers" cfg-str))
+    (raise-argument-error who "string of hyphen-separated natural numbers" cfg-str))
   (define cfg* (string-split cfg-str "-"))
   (if (null? cfg*)
     (arg-error)
@@ -310,6 +314,38 @@
       (if (exact-nonnegative-integer? n)
         n
         (arg-error)))))
+
+(define (normalize-reticulated-id cfg [who 'normalize-reticulated-id])
+  (cond
+    [(reticulated-id-list? cfg)
+     cfg]
+    [(string? cfg)
+     (string->reticulated-id cfg who)]
+    [else
+      (raise-argument-error who "(or/c (listof natural?) string?)" cfg)]))
+
+(define reticulated-id-regexp
+  #rx"^[0-9]+(-[0-9]+)*$")
+
+(define (reticulated-id-list? x)
+  (and (list? x) (andmap natural? x)))
+
+(define (reticulated-id-string? str)
+  (regexp-match? reticulated-id-regexp str))
+
+(define reticulated-id?
+  (or/c reticulated-id-list?
+        (and/c string? reticulated-id-string?)))
+
+(define (reticulated-id<? pre-id0 pre-id1)
+  (define id0 (normalize-reticulated-id pre-id0 'reticulated-id<?))
+  (define id1 (normalize-reticulated-id pre-id1 'reticulated-id<?))
+  (unless (= (length id0) (length id1))
+    (raise-arguments-error 'reticulated-id<? "ids must be for the same benchmark" "id0" id0 "id1" id1))
+  (for/and ((n0 (in-list id0))
+            (n1 (in-list id1)))
+    #;(ditto = n1 (bitwise-and n0 n1))
+    (= n0 (bitwise-ior n0 n1))))
 
 ;; =============================================================================
 
@@ -527,5 +563,21 @@
       (λ () (string->time* "[]")))
     (check-exn exn:fail:contract?
       (λ () (string->time* "[1, -2]"))))
+
+  (test-case "reticulated-id?"
+    (check-true (reticulated-id? "0"))
+    (check-true (reticulated-id? "0-0-0"))
+    (check-true (reticulated-id? "2001-14-3"))
+    (check-true (reticulated-id? '(2001 14 3)))
+    (check-false (reticulated-id? "0-"))
+    (check-false (reticulated-id? "A-A"))
+    (check-false (reticulated-id? "0--5-0"))
+    (check-false (reticulated-id? '(-5 3))))
+
+  (test-case "reticulated-id<?"
+    (check-false (reticulated-id<? "0000" "1111"))
+    (check-true (reticulated-id<? "1111" "0000"))
+    (check-true (reticulated-id<? "7-6" "5-6"))
+    (check-false (reticulated-id<? "6-6" "5-6")))
 )
 

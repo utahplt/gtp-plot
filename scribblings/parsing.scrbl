@@ -16,6 +16,7 @@
     (only-in racket/math natural?))]
 
 @(define tr-info-eval (make-base-eval '(require gtp-plot/typed-racket-info)))
+@(define retic-info-eval (make-base-eval '(require gtp-plot/reticulated-info)))
 
 @; -----------------------------------------------------------------------------
 @title[#:tag "data-formats"]{Data Formats}
@@ -62,12 +63,26 @@
 
 @defproc[(typed-racket-id? [x any/c]) boolean?]{
   Predicate for a Typed Racket configuration name.
+  A name is a @racket[_k]-character string of @racket[#\0] and @racket[#\1] characters.
+  Each digit represents one unit, which may or may not be typed.
+  A @racket[#\1] means @emph{typed} and a @racket[\#0] means @emph{untyped}.
 
   @examples[#:eval tr-info-eval
     (typed-racket-id? "0000")
     (typed-racket-id? "001000011")
     (typed-racket-id? "2001")
     (typed-racket-id? 10)
+  ]
+}
+
+@defproc[(typed-racket-id<? [id0 typed-racket-id?] [id1 typed-racket-id?]) boolean?]{
+  Returns true if the first id describes a subset of the types in the second id.
+
+  @examples[#:eval tr-info-eval
+    (typed-racket-id<? "0000" "1111")
+    (typed-racket-id<? "1111" "0000")
+    (typed-racket-id<? "0110" "1110")
+    (typed-racket-id<? "0110" "1011")
   ]
 }
 
@@ -180,3 +195,38 @@
   Predicate for Reticulated datasets.
 }
 
+@defproc[(reticulated-id? [x any/c]) boolean?]{
+  Predicate for a Reticulated configuration name.
+  A name is a sequence of base-10 numbers.
+  Each position in the sequence corresponds to a module.
+  Each number encodes the type annotations in the module.
+
+  Configuration names may be strings of hypen-separated numbers or lists
+   of natural numbers.
+
+  @examples[#:eval retic-info-eval
+    (reticulated-id? "0")
+    (reticulated-id? "0-0-0")
+    (reticulated-id? "2001-14-3")
+    (reticulated-id? '(2001 14 3))
+  ]
+
+  To decode the type annotations from one number @racket[_N],
+   convert @racket[_N] to base-2 and look for @racket[#\0] digits.
+  Each place in a binary number correponds to a typed unit, and each
+   @racket[#\0] means the unit is typed.
+}
+
+@defproc[(reticulated-id<? [id0 reticulated-id?] [id1 reticulated-id?]) boolean?]{
+  Returns true if the first configuration name describes a subset of the
+   type annotations in the second name.
+
+  @examples[#:eval retic-info-eval
+    (reticulated-id<? "1" "0")
+    (reticulated-id<? "0" "1")
+    (reticulated-id<? "7-6" "5-6")
+    (reticulated-id<? "6-6" "5-6")
+  ]
+
+  The input configurations must be for the same benchmark.
+}

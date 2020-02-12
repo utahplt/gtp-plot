@@ -9,6 +9,8 @@
     (-> any/c any)]
    [typed-racket-id?
     (-> any/c any)]
+   [typed-racket-id<?
+    (-> any/c any/c any)]
    [make-typed-racket-info
     (->* [typed-racket-data?] [#:name (or/c #f symbol?)] performance-info?)]
    [make-typed-racket-sample-info
@@ -137,6 +139,22 @@
   (and (string? str)
        (for/and ([c (in-string str)])
          (memq c '(#\0 #\1)))))
+
+(define (typed-racket-id->int* str)
+  (for/list ((c (in-string str)))
+    (case c
+      ((#\0) 0)
+      ((#\1) 1)
+      (else (raise-argument-error 'typed-racket-id->int* "typed-racket-id?" str)))))
+
+(define (typed-racket-id<? id0 id1)
+  (define i*0 (typed-racket-id->int* id0))
+  (define i*1 (typed-racket-id->int* id1))
+  (unless (= (length i*0) (length i*1))
+    (raise-arguments-error 'typed-racket-id<? "ids must be for the same benchmark" "id0" id0 "id1" id1))
+  (for/and ((i0 (in-list i*0))
+            (i1 (in-list i*1)))
+    (<= i0 i1)))
 
 (define (typed-racket-id->num-units str)
   (string-length str))
@@ -345,6 +363,14 @@
     (check-false (typed-racket-id? "211"))
     (check-false (typed-racket-id? "a11"))
     (check-false (typed-racket-id? "0o0")))
+
+  (test-case "typed-racket-id<?"
+    (check-true (typed-racket-id<? "0" "1"))
+    (check-true (typed-racket-id<? "00" "11"))
+    (check-true (typed-racket-id<? "0000" "1111"))
+    (check-false (typed-racket-id<? "1111" "0000"))
+    (check-true (typed-racket-id<? "0110" "1110"))
+    (check-false (typed-racket-id<? "0110" "1011")))
 
   (test-case "typed-racket-id->num-units"
     (check-equal? (typed-racket-id->num-units "001")
