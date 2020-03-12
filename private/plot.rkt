@@ -301,8 +301,7 @@
 
 (define (make-grace-bars pi)
   ;; TODO generalize ... 
-  ;;(log-gtp-plot-info "rendering discrete-overhead-plot for ~a at ~a" pi D*)
-  (define color0 (if (sample-info? pi) (*SAMPLE-COLOR*) (*OVERHEAD-LINE-COLOR*)))
+  (log-gtp-plot-info "rendering grace-bars for ~a" pi)
   (define num-units (performance-info->num-units pi))
   (define bar-width 4)
   (define bar-offset 1)
@@ -317,8 +316,7 @@
                    [plot-y-transform log-transform]
                    [plot-tick-size TICK-SIZE]
                    [plot-font-face (*OVERHEAD-FONT-FACE*)]
-                   [plot-font-size (*FONT-SIZE*)]
-                   [*POINT-COLOR* color0])
+                   [plot-font-size (*FONT-SIZE*)])
       (plot-pict
         (list
           (for/list ((cfg (in-configurations pi))
@@ -334,6 +332,7 @@
               (list (vector (ivl (+ bar-offset x-val) (+ x-val bar-width)) (ivl 0 y-val)))
               #:alpha (hash-ref style 'alpha (*INTERVAL-ALPHA*))
               #:color (hash-ref style 'color (*POINT-COLOR*))
+              #:line-color (hash-ref style 'line-color (*POINT-COLOR*))
             ))
           (hrule 1 #:color 0 #:width 2 #:alpha 0.6))
         #:x-min 0
@@ -683,7 +682,7 @@
       (apply vl-append GRID-Y-SKIP p*)))
   (begin0
     (apply ht-append GRID-X-SKIP col*)
-    (log-gtp-plot-info "rendering finished")))
+    (log-gtp-plot-info "rendering finished, grid plot")))
 
 ;; -----------------------------------------------------------------------------
 
