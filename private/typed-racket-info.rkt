@@ -33,10 +33,15 @@
   gtp-plot/performance-info
   gtp-plot/sample-info
   gtp-util
+  lang-file/read-lang-file
   (only-in gtp-plot/util
     path->name)
+  (only-in racket/path
+    file-name-from-path)
   (only-in racket/string
-    string-prefix?)
+    string-prefix?
+    string-contains?
+    non-empty-string?)
   (only-in racket/file
     file->value))
 
@@ -55,33 +60,57 @@
 (define NON-SPACE-NON-RPAREN #rx"[^ \t\n\r)]")
 
 (define (looks-like-typed-racket-data path)
-  (with-input-from-file path
-    (lambda ()
-      (define first-data-line
-        (for/first ((ln (in-lines))
-                    #:when (and (not (whitespace-string? ln))
-                                (not (simple-comment-string? ln))))
-          (and (string-prefix? ln "#(") ln)))
-      (and first-data-line
-           (or (regexp-match? NON-SPACE-NON-RPAREN (substring first-data-line 2))
-               (regexp-match? NON-SPACE-NON-RPAREN (current-input-port)))))))
+  (or
+    (gtp-measure-typed-untyped-lang-file? path)
+    (with-input-from-file path
+      (lambda ()
+        (define first-data-line
+          (for/first ((ln (in-lines))
+                      #:when (and (not (whitespace-string? ln))
+                                  (not (simple-comment-string? ln))))
+            (and (string-prefix? ln "#(") ln)))
+        (and first-data-line
+             (or (regexp-match? NON-SPACE-NON-RPAREN (substring first-data-line 2))
+                 (regexp-match? NON-SPACE-NON-RPAREN (current-input-port))))))))
+
+(define (gtp-measure-typed-untyped-lang-file? path)
+  (equal? (lang-file-lang path) "gtp-measure/output/typed-untyped"))
 
 (define (make-typed-racket-info path #:name [name #f])
+  (define gtp-measure-file? (gtp-measure-typed-untyped-lang-file? path))
   (define bm-name (->bm-name name path))
-  (define v (file->value path))
+  (define v
+    (if gtp-measure-file?
+      (parse-gtp-measure-data path)
+      (file->value path)))
   (define nc (vector-length v))
   (define nu (log2 nc))
   (define rr (vector-ref v 0))
   (define tr (vector-ref v (- nc 1)))
   (typed-racket-info
     bm-name
-    path
+    (if gtp-measure-file? (make-tmp path v) path)
     nu
     nc
     rr
     rr
     tr
     in-typed-racket-configurations))
+
+(define (make-tmp base-path v)
+  (define t-dir (find-system-path 'temp-dir))
+  (define base-name (path-string->string (file-name-from-path base-path)))
+  (define t-name
+    (let loop ([suffix #f])
+      (define p (build-path t-dir (format "~a~a" base-name (or suffix ""))))
+      (if (or (directory-exists? p) (file-exists? p))
+        (loop (if suffix (+ suffix 1) 0))
+        p)))
+  (void
+    (with-output-to-file t-name #:exists 'error
+      (lambda ()
+        (writeln v))))
+  t-name)
 
 (define (make-typed-racket-sample-info cfg**
                                        #:name name
@@ -101,6 +130,20 @@
     (path-string? name)
     (let ([m (regexp-match #rx"^([^-]*)-v.*rktd$" (path-string->string name))])
       (and m (cadr m)))))
+
+(define (parse-typed-racket-data path)
+  (if (gtp-measure-typed-untyped-lang-file? path)
+    (parse-gtp-measure-data path)
+    (file->value path)))
+
+(define (parse-gtp-measure-data path)
+  ;; TODO error-checking, flexible input, watch out for sampled data
+  (with-input-from-file path
+    (lambda ()
+      (void (read-line)) ;; drop #lang
+      (for/vector ([ln (in-lines)]
+                   #:when (non-empty-string? ln))
+        (map time-string->cpu-time (cadr (string->value ln)))))))
 
 (define (in-typed-racket-configurations pi)
   (define go
@@ -193,10 +236,12 @@
 
   (define-runtime-path morsecode-file "./test/morsecode-v6.4.rktd")
   (define-runtime-path gregor-file "./test/gregor-v6.4.rktd")
+  (define-runtime-path lnm-file "./test/lnm-gtp-measure.rktd")
 
   (test-case "typed-racket-data?"
     (check-pred typed-racket-data? morsecode-file)
     (check-pred typed-racket-data? gregor-file)
+    (check-pred typed-racket-data? lnm-file)
 
     (check-false (typed-racket-data? "README.md"))
     (check-false (typed-racket-data? 'x))
@@ -355,6 +400,82 @@
         20657/19326)
       (check-equal?
         (untyped/baseline-ratio G)
+        1)))
+
+  (test-case "lnm"
+    (unless CI?
+      (define L (make-typed-racket-info lnm-file))
+
+      (check-equal?
+        (performance-info->name L)
+        'lnm-gtp-measure)
+      (check-not-equal?
+        (performance-info->src L)
+        lnm-file)
+      (check-pred
+        (let ((expected (path-string->string (file-name-from-path lnm-file) )))
+          (lambda (fn) (string-contains? (path-string->string fn) expected)))
+        (performance-info->src L))
+      (check-equal?
+        (performance-info->num-units L)
+        6)
+      (check-equal?
+        (performance-info->num-configurations L)
+        (expt 2 6))
+      (check-equal?
+        (performance-info->baseline-runtime L)
+        (performance-info->untyped-runtime L))
+      (check-equal?
+        (performance-info->baseline-runtime L)
+        525)
+      (check-equal?
+        (performance-info->typed-runtime L)
+        5467/2)
+      (check-equal?
+        (count-configurations L (λ (cfg) #true))
+        64)
+      (check-equal?
+        (count-configurations L (let ([done (box #f)])
+                                   (λ (cfg)
+                                     (if (unbox done)
+                                       #f
+                                       (set-box! done #true)))))
+        1)
+      (check-equal?
+        ((deliverable 1.0) L)
+        6)
+      (check-equal?
+        ((deliverable 1.8) L)
+        16)
+      (check-equal?
+        ((deliverable 5) L)
+        48)
+      (check-equal?
+        (length (filter-configurations L (λ (r) #true)))
+        64)
+      (check-equal?
+        (overhead L 1000)
+        40/21)
+      (check-equal?
+        (overhead L 9000)
+        120/7)
+      (check-equal?
+        (max-overhead L)
+        781/150)
+      (check-equal?
+        (mean-overhead L)
+        829393/268800)
+      (check-equal?
+        (min-overhead L)
+        4141/4200)
+      (check-equal?
+        (typed/baseline-ratio L)
+        (typed/untyped-ratio L))
+      (check-equal?
+        (typed/untyped-ratio L)
+        781/150)
+      (check-equal?
+        (untyped/baseline-ratio L)
         1)))
 
   (test-case "typed-racket-id?"
