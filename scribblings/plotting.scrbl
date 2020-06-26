@@ -104,6 +104,19 @@ For command-line options, run @exec{raco gtp-plot --help}.
   @history[#:added "0.2"]
 }
 
+@defproc[(grid-plot [make-plot (-> any/c pict?)] [data* (listof any/c)]) pict?]{
+  Build plots for a sequence of datasets and arrange the plots into a grid.
+
+  @render-demo[
+    (parameterize ([*FONT-SIZE* 8]
+                   [*GRID-NUM-COLUMNS* 2]
+                   [*GRID-Y* #f]
+                   [*OVERHEAD-PLOT-HEIGHT* 100]
+                   [*OVERHEAD-SHOW-RATIO* #f])
+      (grid-plot overhead-plot (list mbta mbta mbta)))]
+}
+
+
 @section{Experimental Plotting Functions}
 
 The functions in this section make strange plots.
@@ -155,18 +168,6 @@ The appearance of these plots is subject to change.
    of each configuration is 1.
 
   @render-demo[(relative-overhead-cdf mbta mbta)]
-}
-
-@defproc[(grid-plot [make-plot (-> any/c pict?)] [data* (listof any/c)]) pict?]{
-  Build plots for a sequence of datasets and arrange the plots into a grid.
-
-  @render-demo[
-    (parameterize ([*FONT-SIZE* 8]
-                   [*GRID-NUM-COLUMNS* 2]
-                   [*GRID-Y* #f]
-                   [*OVERHEAD-PLOT-HEIGHT* 100]
-                   [*OVERHEAD-SHOW-RATIO* #f])
-      (grid-plot overhead-plot (list mbta mbta mbta)))]
 }
 
 
