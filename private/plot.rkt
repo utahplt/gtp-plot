@@ -46,6 +46,9 @@
        (-> (-> X pict?)
            (listof X)
            pict?))]
+
+    [performance-lattice
+      (-> performance-info? pict?)]
 ))
 
 (require
@@ -143,6 +146,17 @@
 (defparam *TYPED/UNTYPED-RATIO-XTICK?* #f Boolean)
 (defparam *EXACT-RUNTIME-BASELINE?* #f Boolean)
 (defparam *AUTO-POINT-ALPHA?* #true Boolean)
+
+(defparam *LATTICE-UNIT-BORDER-WIDTH* 0 Real)
+(defparam *LATTICE-CONFIG-LABEL-MARGIN* 1 Real)
+(defparam *LATTICE-UNIT-X-MARGIN* 0 Real)
+(defparam *LATTICE-UNIT-HEIGHT* 6 Real)
+(defparam *LATTICE-UNIT-WIDTH* 3 Real)
+(defparam *LATTICE-CONFIG-X-MARGIN* 3 Real)
+(defparam *LATTICE-CONFIG-Y-MARGIN* 8 Real)
+(defparam *LATTICE-LINE-WIDTH* 0.5 Real)
+(defparam *LATTICE-LINE-ALPHA* 0.2 Real)
+(defparam *LATTICE-LINES?* #false Boolean)
 
 ;; -----------------------------------------------------------------------------
 
@@ -684,6 +698,28 @@
     (apply ht-append GRID-X-SKIP col*)
     (log-gtp-plot-info "rendering finished, grid plot")))
 
+(define (performance-lattice pi)
+  (define total-bits (performance-info->num-units pi))
+  (define pict-vec (make-vector (performance-info->num-configurations pi) #f))
+  (define level-pict*
+    (for/list ([on-bits (in-range total-bits -1 -1)])
+      (define perms (select-bits (- total-bits on-bits) total-bits))
+      (apply hc-append (*LATTICE-CONFIG-X-MARGIN*)
+        (for/list ([perm (in-list perms)])
+          (define bv (apply string perm))
+          (define num (bitstring->natural bv))
+          (define cfg-t
+            (for/first ((cfg (in-configurations pi))
+                        #:when (string=? bv (configuration-info->id cfg)))
+              (configuration-info->mean-runtime cfg)))
+          (define pict (make-lattice-point bv (overhead pi cfg-t)))
+          (vector-set! pict-vec num pict)
+          pict))))
+  (define no-lines (apply vc-append (*LATTICE-CONFIG-Y-MARGIN*) level-pict*))
+  (if (*LATTICE-LINES?*)
+    (add-lattice-lines no-lines pict-vec total-bits)
+    no-lines))
+
 ;; -----------------------------------------------------------------------------
 
 (define maybe-freeze
@@ -1133,6 +1169,50 @@
     (if (eq? name-0 name-1)
       name-0
       (raise-arguments-error where "expected performance-info for the same benchmark" "pi-0" pi-0 "pi-1" pi-1))))
+
+(define select-bits
+  (let ([add-0-bit (lambda (r) (cons #\0 r))]
+        [add-1-bit (lambda (r) (cons #\1 r))])
+    (lambda (i L)
+      (cond
+        [(zero? i)  (list (build-list L (lambda (_) #\1)))]
+        [(zero? L) '()]
+        [else (append (map add-0-bit (select-bits (sub1 i) (sub1 L)))
+                      (map add-1-bit (select-bits i (sub1 L))))]))))
+
+(define (make-lattice-point str overhead-t)
+  (define style "Liberation Serif")
+  (define unit-pict
+    (apply hc-append
+           (*LATTICE-UNIT-X-MARGIN*)
+           (for/list ([bit (in-string str)])
+             (filled-rectangle (*LATTICE-UNIT-WIDTH*) (*LATTICE-UNIT-HEIGHT*)
+                             #:color (if (eq? #\1 bit) "black" "white")
+                             #:border-width (*LATTICE-UNIT-BORDER-WIDTH*)
+                             #:border-color "black"))))
+  (define overhead-str (~r overhead-t #:precision 1))
+  (vc-append unit-pict
+             (blank 1 (*LATTICE-CONFIG-LABEL-MARGIN*))
+             (text (string-append overhead-str "x") style (*FONT-SIZE*))))
+
+(define (add-lattice-lines base vec bits)
+  (define line-width (*LATTICE-LINE-WIDTH*))
+  (define line-alpha (*LATTICE-LINE-ALPHA*))
+  (for/fold ([pict base])
+            ([(from-pict idx) (in-indexed (in-vector vec))])
+    (define masks
+      (for/list ([bits (in-list (select-bits (- bits 1) bits))])
+        (bitstring->natural (apply string bits))))
+    (define targets
+      (remove* (list idx)
+               (map (λ (x) (bitwise-ior x idx)) masks)))
+    (for/fold ([pict pict])
+              ([target-idx targets])
+      (define target (vector-ref vec target-idx))
+      (pin-line pict from-pict ct-find target cb-find
+                #:alpha line-alpha
+                #:line-width line-width
+                #:under? #t))))
 
 ;; =============================================================================
 

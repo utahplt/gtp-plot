@@ -116,6 +116,21 @@ For command-line options, run @exec{raco gtp-plot --help}.
       (grid-plot overhead-plot (list mbta mbta mbta)))]
 }
 
+@defproc[(performance-lattice [pi performance-info?]) pict?]{
+  Show the overhead of every configuration in a lattice.
+
+  @render-demo[
+    (parameterize ([*FONT-SIZE* 14]
+                   [*LATTICE-UNIT-WIDTH* 16]
+                   [*LATTICE-UNIT-HEIGHT* 12]
+                   [*LATTICE-CONFIG-Y-MARGIN* 24]
+                   [*LATTICE-LINES?* #true]
+                   [*LATTICE-LINE-ALPHA* 0.5])
+      (performance-lattice mbta))]
+
+  @history[#:added "0.5"]
+}
+
 
 @section{Experimental Plotting Functions}
 
@@ -275,3 +290,44 @@ The appearance of these plots is subject to change.
   A default overhead value.
 }
 
+@defparam[*LATTICE-UNIT-BORDER-WIDTH* r nonnegative-real? #:value 0]{
+  Border width for each little square (unit) in a lattice.
+}
+
+@defparam[*LATTICE-UNIT-X-MARGIN* r nonnegative-real? #:value 0]{
+  Space between units in one configuration rectangle.
+}
+
+@defparam[*LATTICE-UNIT-HEIGHT* r nonnegative-real? #:value 6]{
+  Height of units in a configuration.
+  This is also the height of the configuration.
+}
+
+@defparam[*LATTICE-UNIT-WIDTH* r nonnegative-real? #:value 3]{
+  Width of units in a configuration.
+}
+
+@defparam[*LATTICE-CONFIG-X-MARGIN* r nonnegative-real? #:value 3]{
+  Horizontal space between configurations on the same level of a lattice.
+}
+
+@defparam[*LATTICE-CONFIG-Y-MARGIN* r nonnegative-real? #:value 8]{
+  Vertical space between levels of a lattice.
+}
+
+@defparam[*LATTICE-CONFIG-LABEL-MARGIN* r nonnegative-real? #:value 1]{
+  Space between a configuration and the label right below.
+}
+
+@defparam[*LATTICE-LINES?* r boolean? #:value #false]{
+  When true, draw lines between configurations that are one type-migration step apart.
+}
+
+@defparam[*LATTICE-LINE-WIDTH* r nonnegative-real? #:value 0.5]{
+  Width of lattice lines.
+  Irrelevant if @racket[(*LATTICE-LINES?*)] is false.
+}
+
+@defparam[*LATTICE-LINE-ALPHA* r nonnegative-real? #:value 0.2]{
+  Opacity of lattice lines.
+}
