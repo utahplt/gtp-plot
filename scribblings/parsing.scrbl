@@ -41,14 +41,15 @@
 
   }
   @item{
-    contains a Racket vector with @racket[(expt 2 _N)] elements (for some natural @racket[_N]);
+    contains (or is) a Racket vector with @racket[(expt 2 _N)] elements (for some natural @racket[_N]);
      entries in the vector are lists of runtimes.
 
     @bold{or} contains valid @hyperlink["https://github.com/bennn/gtp-measure"]{@tt{#lang gtp-measure/output/typed-untyped}} data.
-  }
+  }]
 
-  @history[#:changed "0.4" @elem{Accept @tt{gtp-measure} output.}]
-  ]
+  @history[
+    #:changed "0.5" @elem{Accept vector}
+    #:changed "0.4" @elem{Accept @tt{gtp-measure} output.}]
 
   Example data:
   @nested[#:style 'code-inset @verbatim{

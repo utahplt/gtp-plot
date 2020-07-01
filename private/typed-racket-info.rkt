@@ -53,9 +53,17 @@
   [(define (write-proc v port mode)
      (fprintf port "#<typed-racket-info:~a>" (performance-info->name v)))])
 
-(define (typed-racket-data? path)
-  (and (path-string? path)
-       (looks-like-typed-racket-data path)))
+(define (typed-racket-data? v)
+  (cond
+    [(path-string? v)
+     (looks-like-typed-racket-data v)]
+    [(vector? v)
+     (for/and ((elem (in-vector v)))
+       (listof-nonnegative-real? elem))]
+    [else
+     #f]))
+
+(define listof-nonnegative-real? (listof nonnegative-real/c))
 
 (define NON-SPACE-NON-RPAREN #rx"[^ \t\n\r)]")
 
@@ -77,19 +85,30 @@
   (equal? (lang-file-lang path) "gtp-measure/output/typed-untyped"))
 
 (define (make-typed-racket-info path #:name [name #f])
-  (define gtp-measure-file? (gtp-measure-typed-untyped-lang-file? path))
-  (define bm-name (->bm-name name path))
+  (define vector-data? (vector? path))
+  (define gtp-measure-file? (if vector-data? #f (gtp-measure-typed-untyped-lang-file? path)))
+  (define bm-name
+    (if vector-data?
+      (or name 'vector-data)
+      (->bm-name name path)))
   (define v
-    (if gtp-measure-file?
-      (parse-gtp-measure-data path)
-      (file->value path)))
+    (cond
+      [vector-data?
+        path]
+      [gtp-measure-file?
+       (parse-gtp-measure-data path)]
+      [else
+      (file->value path)]))
   (define nc (vector-length v))
   (define nu (log2 nc))
   (define rr (vector-ref v 0))
   (define tr (vector-ref v (- nc 1)))
   (typed-racket-info
     bm-name
-    (if gtp-measure-file? (make-tmp path v) path)
+    (cond
+      [vector-data? (make-tmp "anon-tr-data" v)]
+      [gtp-measure-file? (make-tmp path v)]
+      [else path])
     nu
     nc
     rr
@@ -242,6 +261,7 @@
     (check-pred typed-racket-data? morsecode-file)
     (check-pred typed-racket-data? gregor-file)
     (check-pred typed-racket-data? lnm-file)
+    (check-pred typed-racket-data? '#((20) (50) (100) (200/3) (30) (100/3) (100/3) (10)))
 
     (check-false (typed-racket-data? "README.md"))
     (check-false (typed-racket-data? 'x))
