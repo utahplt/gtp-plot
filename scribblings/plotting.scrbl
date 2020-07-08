@@ -6,6 +6,7 @@
   gtp-plot/typed-racket-info
   gtp-plot/reticulated-info
   gtp-plot/plot
+  pict
   (for-label
     gtp-plot/configuration-info
     gtp-plot/performance-info
@@ -32,6 +33,7 @@ The examples in this section use the following context:
   (require gtp-plot/typed-racket-info
            gtp-plot/reticulated-info
            gtp-plot/plot
+           pict
            racket/runtime-path)
   (define-runtime-path mbta-data "./docs/data/mbta-v6.2.rktd")
   (define mbta (make-typed-racket-info mbta-data))
@@ -116,7 +118,27 @@ For command-line options, run @exec{raco gtp-plot --help}.
       (grid-plot overhead-plot (list mbta mbta mbta)))]
 }
 
-@defproc[(performance-lattice [pi performance-info?]) pict?]{
+@defproc[(performance-lattice [pi (or/c performance-info? natural?)]) pict?]{
+  Given a @racket[performance-info] structure, shows
+   the overhead of every configuration in a lattice.
+  Given a number, render an unlabeled lattice.
+
+  @render-demo[
+    (parameterize ([*FONT-SIZE* 14]
+                   [*LATTICE-UNIT-WIDTH* 16]
+                   [*LATTICE-UNIT-HEIGHT* 12]
+                   [*LATTICE-CONFIG-X-MARGIN* 10]
+                   [*LATTICE-CONFIG-Y-MARGIN* 25]
+                   [*LATTICE-LINES?* #true]
+                   [*LATTICE-LINE-ALPHA* 0.5])
+      (ht-append 4
+        (performance-lattice mbta)
+        (performance-lattice 3)))]
+
+  @history[#:added "0.5"]
+}
+
+@defproc[(configuration-lattice [pi performance-info?]) pict?]{
   Show the overhead of every configuration in a lattice.
 
   @render-demo[
@@ -331,3 +353,12 @@ The appearance of these plots is subject to change.
 @defparam[*LATTICE-LINE-ALPHA* r nonnegative-real? #:value 0.2]{
   Opacity of lattice lines.
 }
+
+@defparam[*LATTICE-UNTYPED-COLOR* c plot-color/c #:value "white"]{
+  Color for untyped units in a lattice.
+}
+
+@defparam[*LATTICE-TYPED-COLOR* c plot-color/c #:value "black"]{
+  Color for typed units in a lattice.
+}
+

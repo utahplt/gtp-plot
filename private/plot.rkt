@@ -48,7 +48,7 @@
            pict?))]
 
     [performance-lattice
-      (-> performance-info? pict?)]
+      (-> (or/c performance-info? exact-nonnegative-integer?) pict?)]
 ))
 
 (require
@@ -157,6 +157,8 @@
 (defparam *LATTICE-LINE-WIDTH* 0.5 Real)
 (defparam *LATTICE-LINE-ALPHA* 0.2 Real)
 (defparam *LATTICE-LINES?* #false Boolean)
+(defparam *LATTICE-UNTYPED-COLOR* "white" Color)
+(defparam *LATTICE-TYPED-COLOR* "black" Color)
 
 ;; -----------------------------------------------------------------------------
 
@@ -699,8 +701,10 @@
     (log-gtp-plot-info "rendering finished, grid plot")))
 
 (define (performance-lattice pi)
-  (define total-bits (performance-info->num-units pi))
-  (define pict-vec (make-vector (performance-info->num-configurations pi) #f))
+  (define pi? (performance-info? pi))
+  (define total-bits
+    (if pi? (performance-info->num-units pi) pi))
+  (define pict-vec (make-vector (if pi? (performance-info->num-configurations pi) (expt 2 pi)) #f))
   (define level-pict*
     (for/list ([on-bits (in-range total-bits -1 -1)])
       (define perms (select-bits (- total-bits on-bits) total-bits))
@@ -709,10 +713,10 @@
           (define bv (apply string perm))
           (define num (bitstring->natural bv))
           (define cfg-t
-            (for/first ((cfg (in-configurations pi))
-                        #:when (string=? bv (configuration-info->id cfg)))
+            (for/or ((cfg (if pi? (in-configurations pi) '()))
+                     #:when (string=? bv (configuration-info->id cfg)))
               (configuration-info->mean-runtime cfg)))
-          (define pict (make-lattice-point bv (overhead pi cfg-t)))
+          (define pict (make-lattice-point bv (and cfg-t (overhead pi cfg-t))))
           (vector-set! pict-vec num pict)
           pict))))
   (define no-lines (apply vc-append (*LATTICE-CONFIG-Y-MARGIN*) level-pict*))
@@ -1181,19 +1185,20 @@
                       (map add-1-bit (select-bits i (sub1 L))))]))))
 
 (define (make-lattice-point str overhead-t)
-  (define style "Liberation Serif")
-  (define unit-pict
+  (define cfg-pict
     (apply hc-append
            (*LATTICE-UNIT-X-MARGIN*)
            (for/list ([bit (in-string str)])
              (filled-rectangle (*LATTICE-UNIT-WIDTH*) (*LATTICE-UNIT-HEIGHT*)
-                             #:color (if (eq? #\1 bit) "black" "white")
+                             #:color (if (eq? #\1 bit) (*LATTICE-TYPED-COLOR*) (*LATTICE-UNTYPED-COLOR*))
                              #:border-width (*LATTICE-UNIT-BORDER-WIDTH*)
                              #:border-color "black"))))
-  (define overhead-str (~r overhead-t #:precision 1))
-  (vc-append unit-pict
-             (blank 1 (*LATTICE-CONFIG-LABEL-MARGIN*))
-             (text (string-append overhead-str "x") style (*FONT-SIZE*))))
+  (if overhead-t
+    (let ((overhead-str (~r overhead-t #:precision 1)))
+      (vc-append cfg-pict
+                 (blank 1 (*LATTICE-CONFIG-LABEL-MARGIN*))
+                 (text (string-append overhead-str "x") "Liberation Serif" (*FONT-SIZE*))))
+    cfg-pict))
 
 (define (add-lattice-lines base vec bits)
   (define line-width (*LATTICE-LINE-WIDTH*))
