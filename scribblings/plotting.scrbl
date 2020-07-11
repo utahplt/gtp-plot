@@ -269,7 +269,7 @@ The appearance of these plots is subject to change.
   Sets width of solid lines used in plots.
 }
 
-@defparam[*OVERHEAD-MAX* x-max exact-positive-integer? #:value 10]{
+@defparam[*OVERHEAD-MAX* x-max exact-positive-integer? #:value 20]{
   Sets maximum @math{x}-value in overhead plots.
 }
 
