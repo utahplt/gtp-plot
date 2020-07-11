@@ -1,6 +1,8 @@
 #lang scribble/manual
 
 @require[
+  (only-in scribble-abbrevs/scribble
+    oxfordize)
   (for-label
     pict
     gtp-plot/system
@@ -13,6 +15,19 @@
 
 @; -----------------------------------------------------------------------------
 @title[#:tag "gtp-support"]{Support}
+
+@defmodule[gtp-plot]{
+  One-stop import.
+  Brings in:
+  @oxfordize[
+    (list
+      @racketmodname[gtp-plot/configuration-info]
+      @racketmodname[gtp-plot/performance-info]
+      @racketmodname[gtp-plot/sample-info]
+      @racketmodname[gtp-plot/plot]
+      @racketmodname[gtp-plot/typed-racket-info]
+      @racketmodname[gtp-plot/reticulated-info])].
+}
 
 @section[#:tag "gtp-system"]{System API}
 @defmodule[gtp-plot/system]{
