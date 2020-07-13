@@ -705,6 +705,13 @@
   (define total-bits
     (if pi? (performance-info->num-units pi) pi))
   (define pict-vec (make-vector (if pi? (performance-info->num-configurations pi) (expt 2 pi)) #f))
+  (define-values [*max-width update-max-width!]
+    ;; track widest config pict, use to pad configs to same width
+    (let ((*max-width (box 0)))
+      (values *max-width
+              (lambda (new)
+                (when (< (unbox *max-width) new)
+                  (set-box! *max-width new))))))
   (define level-pict*
     (for/list ([on-bits (in-range total-bits -1 -1)])
       (define perms (select-bits (- total-bits on-bits) total-bits))
@@ -717,9 +724,14 @@
                      #:when (string=? bv (configuration-info->id cfg)))
               (configuration-info->mean-runtime cfg)))
           (define pict (make-lattice-point bv (and cfg-t (overhead pi cfg-t))))
-          (vector-set! pict-vec num pict)
+          (void
+            (update-max-width! (pict-width pict))
+            (vector-set! pict-vec num pict))
           pict))))
-  (define no-lines (apply vc-append (*LATTICE-CONFIG-Y-MARGIN*) level-pict*))
+  (define no-lines
+    (let* ((pad-pict (blank (unbox *max-width) 0))
+           (add-x-padding (lambda (pp) (cc-superimpose pad-pict pp))))
+      (apply vc-append (*LATTICE-CONFIG-Y-MARGIN*) (map add-x-padding level-pict*))))
   (if (*LATTICE-LINES?*)
     (add-lattice-lines no-lines pict-vec total-bits)
     no-lines))
