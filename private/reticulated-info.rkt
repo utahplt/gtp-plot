@@ -13,7 +13,7 @@
    [reticulated-id<?
      (-> any/c any/c any)]
    [make-reticulated-info
-    (-> reticulated-data? performance-info?)]))
+    (->* [reticulated-data?] [(or/c 'exhaustive 'approximate #f)] performance-info?)]))
 
 (require
   gtp-plot/configuration-info
@@ -71,21 +71,34 @@
        (or (reticulated-exhaustive-directory? path)
            (reticulated-sample-directory? path))))
 
-(define (make-reticulated-info path)
-  (if (reticulated-sample-directory? path)
-    (make-reticulated-sample-info path)
-    (make-reticulated-exhaustive-info path)))
+(define (make-reticulated-info path [kind #f])
+  (define mk
+    (case kind
+      ((exhaustive)
+       make-reticulated-exhaustive-info)
+      ((approximate)
+       make-reticulated-sample-info)
+      (else
+       (if (reticulated-sample-directory? path)
+         make-reticulated-sample-info
+         make-reticulated-exhaustive-info))))
+  (mk path))
 
+;; (-> (or/c reticulated-sample-directory? (and/c reticulated-exhaustive-directory? has-samples?))
+;;     sample-info?)
 (define (make-reticulated-sample-info path)
   (define name (parse-reticulated-directory-name path))
-  (define num-units
-    (reticulated-meta->num-units (file->reticulated-meta (build-path path (format "~a-~a" name META-SUFFIX)))))
+  (define-values [num-units untyped-runtime* typed-runtime*]
+    (let ((data-path (directory->data-path path name)))
+      (if data-path
+        (let-values (((num-configs untyped-runtime* typed-runtime*) (scan-karst-file data-path)))
+          (values (log2 num-configs) untyped-runtime* typed-runtime*))
+        (values
+          (reticulated-meta->num-units (file->reticulated-meta (build-path path (format "~a-~a" name META-SUFFIX))))
+          (file->runtime* (build-path path (format "~a-~a" name UNTYPED-SUFFIX)))
+          (file->runtime* (build-path path (format "~a-~a" name TYPED-SUFFIX)))))))
   (define baseline-runtime*
     (file->runtime* (build-path path (format "~a-~a" name PYTHON-SUFFIX))))
-  (define untyped-runtime*
-    (file->runtime* (build-path path (format "~a-~a" name UNTYPED-SUFFIX))))
-  (define typed-runtime*
-    (file->runtime* (build-path path (format "~a-~a" name TYPED-SUFFIX))))
   (define ri
     (reticulated-info
       (string->symbol name)
@@ -103,13 +116,9 @@
 
 (define (make-reticulated-exhaustive-info path)
   (define name (parse-reticulated-directory-name path))
-  (define data-path
-    (let* ([data-name (format "~a~a" name DATA-SUFFIX)]
-           [data-path (build-path path data-name)]
-           [zip-path (build-path path (format "~a~a.gz" name DATA-SUFFIX))])
-      (if (file-exists? data-path)
-        data-path
-        (unpack-data zip-path data-name))))
+  (define data-path (directory->data-path path name))
+  (unless data-path
+    (raise-argument-error 'make-reticulated-exhaustive-info "reticulated-exhaustive-directory?" path))
   (define-values [num-configs untyped-runtime typed-runtime]
     (scan-karst-file data-path))
   (define num-units (log2 num-configs))
@@ -222,6 +231,18 @@
     (gunzip src-path (λ (_f _a) unzip-file))
     (void))
   unzip-file)
+
+(define (directory->data-path path name)
+  (let* ([data-name (format "~a~a" name DATA-SUFFIX)]
+         [data-path (build-path path data-name)]
+         [zip-path (build-path path (format "~a~a.gz" name DATA-SUFFIX))])
+    (cond
+      [(file-exists? data-path)
+       data-path]
+      [(file-exists? zip-path)
+       (unpack-data zip-path data-name)]
+      [else
+        #f])))
 
 ;; scan-karst-file : Path-String -> (Values Natural (Listof Natural) Natural Natural)
 ;; Take a "first glance" pass over a data file

@@ -194,8 +194,13 @@
    @tt{gm-pepm-2018} package.
 }
 
-@defproc[(make-reticulated-info [ps reticulated-data?]) reticulated-info?]{
+@defproc[(make-reticulated-info [ps reticulated-data?] [kind (or/c 'exhaustive 'approximate #f) #f]) reticulated-info?]{
   Build a @tech{performance info} structure from a Reticulated dataset.
+
+  By default, inspects the given dataset and chooses whether to return
+   a @racket[reticulated-info?] struct with exhaustive data
+   or a @racket[sample-info?] struct with approximate data.
+  Use the @racket[kind] argument to override the default.
 }
 
 @defproc[(reticulated-info? [x any/c]) boolean?]{
