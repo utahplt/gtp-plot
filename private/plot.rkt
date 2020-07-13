@@ -39,7 +39,7 @@
      (-> performance-info? pict?)]
 
     [validate-samples-plot
-     (-> performance-info? pict?)]
+     (-> performance-info? sample-info? pict?)]
 
     [grid-plot
      (parametric->/c [X]
@@ -494,9 +494,8 @@
 (define (discrete-samples-plot pi D*)
   (discrete-overhead-plot pi D*))
 
-(define (validate-samples-plot si)
-  (log-gtp-plot-info "rendering validate-samples-plot for ~a" si)
-  ;; TODO use standard-D
+(define (validate-samples-plot pi si)
+  (log-gtp-plot-info "rendering validate-samples-plot for ~a and ~s" pi si)
   (define sample-size (sample-info->sample-size si))
   (define pi* (sample-info->performance-info* si))
   (define body (maybe-freeze
@@ -511,11 +510,11 @@
                    [*OVERHEAD-LINE-WIDTH* 0.5])
       (plot-pict
         (list
-          (make-count-configurations-function si)
+          (make-count-configurations-function pi)
           (parameterize ([*OVERHEAD-LINE-COLOR* (*SAMPLE-COLOR*)])
             (make-sample-function-interval pi*))
           (tick-grid)
-          (make-count-configurations-function si #:interval? #f))
+          (make-count-configurations-function pi #:interval? #f))
         #:x-min 1
         #:x-max (*OVERHEAD-MAX*)
         #:y-min 0
