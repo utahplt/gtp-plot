@@ -87,8 +87,8 @@
                                 [#:src src path-string?]
                                 [#:num-units num-units natural?]
                                 [#:baseline-runtime* baseline-runtime* (listof nonnegative-real/c)]
-                                [#:untyped-runtime* untyped-runtime (listof nonnegative-real/c)]
-                                [#:typed-runtime* typed-runtime (listof nonnegative-real/c)]
+                                [#:untyped-runtime* untyped-runtime* (listof nonnegative-real/c)]
+                                [#:typed-runtime* typed-runtime* (listof nonnegative-real/c)]
                                 [#:make-in-configurations make-in-configurations (-> performance-info? (sequence/c configuration-info?))])
          performance-info?]{
   Builds a @tech{performance info} structure for the data for a gradually-typed program.
