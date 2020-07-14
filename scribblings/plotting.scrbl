@@ -4,9 +4,12 @@
   scribble/example
   racket/runtime-path
   gtp-plot/typed-racket-info
+  gtp-plot/performance-info
   gtp-plot/reticulated-info
+  gtp-plot/sample-info
   gtp-plot/plot
   pict
+  (only-in racket/random random-sample)
   (for-label
     gtp-plot/configuration-info
     gtp-plot/performance-info
@@ -15,6 +18,7 @@
     gtp-plot/typed-racket-info
     gtp-plot/util
     pict
+    (only-in racket/random random-sample)
     plot/utils
     racket/base
     racket/contract
@@ -29,11 +33,14 @@
 
 The examples in this section use the following context:
 
-@racketblock[
+uracketblock[
   (require gtp-plot/typed-racket-info
+           gtp-plot/performance-info
            gtp-plot/reticulated-info
+           gtp-plot/sample-info
            gtp-plot/plot
            pict
+           (only-in racket/random random-sample)
            racket/runtime-path)
   (define-runtime-path mbta-data "./docs/data/mbta-v6.2.rktd")
   (define mbta (make-typed-racket-info mbta-data))
@@ -88,6 +95,18 @@ For command-line options, run @exec{raco gtp-plot --help}.
    with at most @math{D}x overhead.
 
   @render-demo[(parameterize ([*OVERHEAD-SHOW-RATIO* #f]) (samples-plot sample_fsm))]
+}
+
+@defproc[(validate-samples-plot [pi performance-info?] [si sample-info?]) pict?]{
+  Plot exhaustive and approximate data side-by-side.
+
+  @render-demo[
+    (parameterize ([*OVERHEAD-SHOW-RATIO* #f])
+      (let* ((sample*
+              (for/list ((_i (in-range 4)))
+                (random-sample (in-configurations mbta) 20)))
+             (si (make-sample-info mbta sample*)))
+        (validate-samples-plot mbta si)))]
 }
 
 @defproc[(relative-scatterplot [pi-x performance-info?] [pi-y performance-info?]) pict?]{
@@ -249,6 +268,10 @@ The appearance of these plots is subject to change.
 
 @defparam[*INTERVAL-ALPHA* ia nonnegative-real/c #:value 1]{
   Sets the transparency of shaded plot regions.
+}
+
+@defparam[*LEGEND-Y-SKIP* n real? #:value 10]{
+  Vertical space between legend pict and a plot.
 }
 
 @defparam[*OVERHEAD-FREEZE-BODY* freeze? boolean? #:value #f]{

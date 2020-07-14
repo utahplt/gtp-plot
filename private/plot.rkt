@@ -111,7 +111,7 @@
 (defparam *SAMPLE-INTERVAL-STYLE* 'solid plot-brush-style/c)
 (defparam *MULTI-INTERVAL-STYLE* #f (or/c #f plot-brush-style/c (listof plot-brush-style/c)))
 (defparam *LEGEND-HSPACE* 20 Pict-Units)
-(defparam *LEGEND-VSPACE* 10 Pict-Units)
+(defparam *LEGEND-Y-SKIP* 10 Pict-Units)
 (defparam *OVERHEAD-LEGEND?* #true Boolean)
 (defparam *LEGEND?* #true Boolean)
 (defparam *GRID-X* 600 Natural)
@@ -1093,11 +1093,11 @@
 
 (define (add-legend top-left body top-right)
   (rt-superimpose
-    (vl-append (*LEGEND-VSPACE*) top-left body)
+    (vl-append (*LEGEND-Y-SKIP*) top-left body)
     top-right))
 
 (define (add-color-legend pict legend)
-  (vr-append (*LEGEND-VSPACE*) pict legend))
+  (vr-append (*LEGEND-Y-SKIP*) pict legend))
 
 (define (make-color-legend pi* first-color)
   (define HSPACE (*LEGEND-HSPACE*))
