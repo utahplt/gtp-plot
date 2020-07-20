@@ -76,6 +76,8 @@
   (only-in racket/math
     exact-ceiling
     exact-floor)
+  (only-in racket/string
+    string-join)
   (only-in scribble-abbrevs
     add-commas))
 
@@ -274,8 +276,7 @@
         #:width (*OVERHEAD-PLOT-WIDTH*)
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
   (define base-pict
-    ;; TODO don't just use car
-    (overhead-add-legend (car pi*) body))
+    (overhead-add-legend pi* body))
   (begin0
     (if (and multi? legend?)
       (add-color-legend base-pict (make-color-legend pi* color0))
@@ -1053,15 +1054,16 @@
                (format "~a~a" v unit-str)
                (format "~a" v))))))
 
-(define (overhead-add-legend pi pict)
+(define (overhead-add-legend pi* pict)
   (if (*OVERHEAD-LEGEND?*)
-    (let ()
-      (define name (render-benchmark-name (performance-info->name pi)))
+    (let ((single? (performance-info? pi*)))
+      (define pi-0 (if single? pi* (car pi*)))
+      (define name (render-benchmark-name (string-join (map (compose1 symbol->string performance-info->name) (if single? (list pi*) pi*)) ", ")))
       (define tp-ratio
         (if (*OVERHEAD-SHOW-RATIO*)
-          (render-typed/baseline-ratio (typed/baseline-ratio pi))
+          (render-typed/baseline-ratio (typed/baseline-ratio pi-0))
           (blank 0 0)))
-      (define nc (render-count (performance-info->num-configurations pi) "configurations"))
+      (define nc (render-count (performance-info->num-configurations pi-0) "configurations"))
       (add-legend (hb-append (*LEGEND-HSPACE*) name tp-ratio)
                   pict
                   nc))
@@ -1117,7 +1119,7 @@
   (text str (cons 'bold TITLE-FACE) (*FONT-SIZE*) angle))
 
 (define (render-benchmark-name sym)
-  (title-text (symbol->string sym)))
+  (title-text (if (symbol? sym) (symbol->string sym) sym)))
 
 (define (render-typed/baseline-ratio r)
   (define text
