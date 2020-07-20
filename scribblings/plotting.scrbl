@@ -33,7 +33,7 @@
 
 The examples in this section use the following context:
 
-uracketblock[
+@racketblock[
   (require gtp-plot/typed-racket-info
            gtp-plot/performance-info
            gtp-plot/reticulated-info
