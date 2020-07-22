@@ -42,9 +42,9 @@ The examples in this section use the following context:
            pict
            (only-in racket/random random-sample)
            racket/runtime-path)
-  (define-runtime-path mbta-data "./docs/data/mbta-v6.2.rktd")
+  (define-runtime-path mbta-data "./scribblings/data/mbta-v6.2.rktd")
   (define mbta (make-typed-racket-info mbta-data))
-  (define-runtime-path sample_fsm-data "./docs/data/sample_fsm/")
+  (define-runtime-path sample_fsm-data "./scribblings/data/sample_fsm/")
   (define sample_fsm (make-reticulated-info sample_fsm-data))
   (*OVERHEAD-PLOT-HEIGHT* 200)
   (*OVERHEAD-PLOT-WIDTH* 400)
@@ -120,7 +120,12 @@ For command-line options, run @exec{raco gtp-plot --help}.
   Points below the line are faster in @racket[pi-x] and points to the left of
    the line are faster in @racket[pi-y].
 
-  @render-demo[(relative-scatterplot mbta mbta)]
+  @render-demo[
+    (parameterize ([*POINT-SYMBOL* 'dot]
+                   [*POINT-SIZE* 30]
+                   [*POINT-ALPHA* 0.5]
+                   [*POINT-COLOR* 6])
+      (relative-scatterplot mbta mbta))]
 
   @history[#:added "0.2"]
 }
