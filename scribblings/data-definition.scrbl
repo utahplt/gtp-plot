@@ -207,6 +207,13 @@
 }
 
 @deftogether[(
+  @defproc[(max-overhead-configuration [pi performance-info?]) configuration-info?]
+  @defproc[(min-overhead-configuration [pi performance-info?]) configuration-info?]
+)]{
+  Return a configuration with max. or min. overhead.
+}
+
+@deftogether[(
   @defproc[(typed/baseline-ratio [pi performance-info?]) nonnegative-real/c]
   @defproc[(typed/untyped-ratio [pi performance-info?]) nonnegative-real/c]
   @defproc[(untyped/baseline-ratio [pi performance-info?]) nonnegative-real/c]

@@ -112,6 +112,10 @@
     (-> performance-info? nonnegative-real/c)]
    ;; Returns the maximum observed overhead of any configuration in `p`
 
+   [max-overhead-configuration
+    (-> performance-info? configuration-info?)]
+   ;; Returns the configuration with max. overhead
+
    [mean-overhead
     (-> performance-info? nonnegative-real/c)]
    ;; Returns the average overhead across all configurations in `p`
@@ -119,6 +123,10 @@
    [min-overhead
     (-> performance-info? nonnegative-real/c)]
    ;; Returns the lowest observed overhead of any configuration in `p`
+
+   [min-overhead-configuration
+    (-> performance-info? configuration-info?)]
+   ;; Returns the configuration with min. overhead
 
    [typed/baseline-ratio
     (-> performance-info? nonnegative-real/c)]
@@ -314,6 +322,20 @@
 (define (min-overhead pi)
   (overhead pi (fold/mean-runtime pi min)))
 
+(define (max-overhead-configuration pi)
+  (define (keep-max acc cfg)
+    (if (>= (configuration-info->mean-runtime acc) (configuration-info->mean-runtime cfg))
+      acc
+      cfg))
+  (fold-configurations pi keep-max))
+
+(define (min-overhead-configuration pi)
+  (define (keep-min acc cfg)
+    (if (<= (configuration-info->mean-runtime acc) (configuration-info->mean-runtime cfg))
+      acc
+      cfg))
+  (fold-configurations pi keep-min))
+
 (define (typed/baseline-ratio pi)
   (/ (performance-info->typed-runtime pi)
      (performance-info->baseline-runtime pi)))
@@ -406,6 +428,8 @@
         (check-equal? (performance-info->num-configurations pi) 4)
         (check-equal? (min-overhead pi) 1/2)
         (check-equal? (max-overhead pi) 2)
+        (check-equal? (configuration-info->id (min-overhead-configuration pi)) 1)
+        (check-equal? (configuration-info->id (max-overhead-configuration pi)) 4)
         (check-equal? (mean-overhead pi) (mean (map (let ((baseline (car t*))) (lambda (i) (/ i baseline))) t*)))
         (check-equal? (typed/untyped-ratio pi) 1)
         (check-equal? ((deliverable 1.8) pi) 3)
