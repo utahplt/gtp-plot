@@ -41,6 +41,9 @@
     [validate-samples-plot
      (-> performance-info? sample-info? pict?)]
 
+    ;[path-plot
+    ; (-> performance-info? sample-info? pict?)]
+
     [grid-plot
      (parametric->/c [X]
        (-> (-> X pict?)

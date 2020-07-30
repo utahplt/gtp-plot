@@ -13,6 +13,8 @@
   log-gtp-plot-error
   log-gtp-plot-fatal
 
+  integer-count-bits
+
   (contract-out
     [confidence-interval
      (-> (listof nonnegative-real/c) #:cv nonnegative-real/c (cons/c real? real?))]
@@ -237,6 +239,13 @@
             #:when (eq? c #\0))
     1))
 
+(define (integer-count-bits n)
+  (let loop ((k n))
+    (if (zero? k)
+      0
+      (+ (if (bitwise-bit-set? k 0) 1 0)
+         (loop (arithmetic-shift k -1))))))
+
 ;; =============================================================================
 
 (module+ test
@@ -413,5 +422,14 @@
     (check-equal? (string-last-index-of "hello" #\o) 4)
     (check-equal? (string-last-index-of "hello" #\l) 3)
     (check-equal? (string-last-index-of "hello" #\Q) #f))
+
+  (test-case "integer-count-bits"
+    (check-equal? (integer-count-bits 0) 0)
+    (check-equal? (integer-count-bits 1) 1)
+    (check-equal? (integer-count-bits 2) 1)
+    (check-equal? (integer-count-bits 3) 2)
+    (check-equal? (integer-count-bits 1111) 6)
+    (check-equal? (integer-count-bits (expt 2 10)) 1)
+    (check-equal? (integer-count-bits (- (expt 2 5) 1)) 5))
 
 )

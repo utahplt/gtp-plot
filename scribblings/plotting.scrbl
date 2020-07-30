@@ -34,9 +34,9 @@
 The examples in this section use the following context:
 
 @racketblock[
-  (require gtp-plot/typed-racket-info
-           gtp-plot/performance-info
+  (require gtp-plot/performance-info
            gtp-plot/reticulated-info
+           gtp-plot/typed-racket-info
            gtp-plot/sample-info
            gtp-plot/plot
            pict
@@ -73,6 +73,9 @@ For command-line options, run @exec{raco gtp-plot --help}.
   This function is intended for @tech{exhaustive performance info} structures.
 
   @render-demo[(overhead-plot mbta)]
+  @render-demo[
+    (parameterize ((*OVERHEAD-SHOW-RATIO* #f))
+      (overhead-plot (list mbta (typed-racket-info%best-typed-path mbta 2))))]
 }
 
 @defproc[(exact-runtime-plot [pi (treeof performance-info?)]) pict?]{

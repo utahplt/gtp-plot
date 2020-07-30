@@ -9,7 +9,7 @@
     (-> any/c any)]
    [typed-racket-id?
     (-> any/c any)]
-   [typed-racket-id<?
+   [typed-racket-id<=?
     (-> any/c any/c any)]
    [make-typed-racket-info
     (->* [typed-racket-data?] [#:name (or/c #f symbol?)] performance-info?)]
@@ -21,6 +21,8 @@
         sample-info?)]
    [make-typed-racket-configuration-info
      (-> typed-racket-id? (listof nonnegative-real/c) typed-racket-configuration-info?)]
+   [typed-racket-info%best-typed-path
+     (-> typed-racket-info? natural? typed-racket-info?)]
    [typed-racket-configuration-info?
      (-> any/c boolean?)]
    [typed-configuration-info?
@@ -36,6 +38,8 @@
   lang-file/read-lang-file
   (only-in gtp-plot/util
     path->name)
+  (only-in racket/math
+    natural?)
   (only-in racket/path
     file-name-from-path)
   (only-in racket/string
@@ -98,23 +102,33 @@
       [gtp-measure-file?
        (parse-gtp-measure-data path)]
       [else
-      (file->value path)]))
+       (file->value path)]))
   (define nc (vector-length v))
   (define nu (log2 nc))
   (define rr (vector-ref v 0))
   (define tr (vector-ref v (- nc 1)))
-  (typed-racket-info
-    bm-name
-    (cond
-      [vector-data? (make-tmp "anon-tr-data" v)]
-      [gtp-measure-file? (make-tmp path v)]
-      [else path])
-    nu
-    nc
-    rr
-    rr
-    tr
-    in-typed-racket-configurations))
+  (if vector-data?
+    (typed-racket-info
+      bm-name
+      #f
+      nu
+      nc
+      rr
+      rr
+      tr
+      (let ((cfg* (vector->configurations v nu)))
+        (lambda (_pi) v)))
+    (typed-racket-info
+      bm-name
+      (cond
+        [gtp-measure-file? (make-tmp path v)]
+        [else path])
+      nu
+      nc
+      rr
+      rr
+      tr
+      in-typed-racket-configurations)))
 
 (define (make-tmp base-path v)
   (define t-dir (find-system-path 'temp-dir))
@@ -165,10 +179,12 @@
         (map time-string->cpu-time (cadr (string->value ln)))))))
 
 (define (in-typed-racket-configurations pi)
+  (vector->configurations (file->value (performance-info->src pi))
+                          (performance-info->num-units pi)))
+
+(define (vector->configurations v num-units)
   (define go
-    (let* ([v (file->value (performance-info->src pi))]
-           [num-configs (vector-length v)]
-           [num-units (performance-info->num-units pi)]
+    (let* ([num-configs (vector-length v)]
            [count-hi-bits (λ (cfg)
                             (for/sum ([c (in-string cfg)]
                                       #:when (eq? c #\1))
@@ -190,6 +206,21 @@
 (define (stop? a b c)
   (and (eq? #f a) (eq? a b) (eq? b c)))
 
+(define (typed-racket-info%best-typed-path pi n)
+  (performance-info->typed-racket-info
+    (performance-info%best-typed-path pi n typed-racket-configuration-dist)))
+
+(define (performance-info->typed-racket-info pi)
+  (typed-racket-info
+    (performance-info->name pi)
+    (performance-info->src pi)
+    (performance-info->num-units pi)
+    (performance-info->num-configurations pi)
+    (performance-info->baseline-runtime* pi)
+    (performance-info->untyped-runtime* pi)
+    (performance-info->typed-runtime* pi)
+    (performance-info-make-in-configurations pi)))
+
 ;; -----------------------------------------------------------------------------
 
 (struct typed-racket-configuration-info configuration-info () #:transparent)
@@ -209,14 +240,37 @@
       ((#\1) 1)
       (else (raise-argument-error 'typed-racket-id->int* "typed-racket-id?" str)))))
 
-(define (typed-racket-id<? id0 id1)
+(define (typed-racket-id<=? id0 id1)
   (define i*0 (typed-racket-id->int* id0))
   (define i*1 (typed-racket-id->int* id1))
   (unless (= (length i*0) (length i*1))
-    (raise-arguments-error 'typed-racket-id<? "ids must be for the same benchmark" "id0" id0 "id1" id1))
+    (raise-arguments-error 'typed-racket-id<=? "ids must be for the same benchmark" "id0" id0 "id1" id1))
+  (bit*<? i*0 i*1))
+
+(define (typed-racket-configuration-dist c0 c1)
+  (typed-racket-id-dist (configuration-info->id c0) (configuration-info->id c1)))
+
+(define (typed-racket-id-dist id0 id1)
+  (define i*0 (typed-racket-id->int* id0))
+  (define i*1 (typed-racket-id->int* id1))
+  (cond
+    [(bit*<? i*0 i*1)
+     (bit*-dist i*0 i*1)]
+    [(bit*<? i*1 i*0)
+     (- (bit*-dist i*1 i*0))]
+    [else
+     #f]))
+
+(define (bit*<? i*0 i*1)
   (for/and ((i0 (in-list i*0))
             (i1 (in-list i*1)))
     (<= i0 i1)))
+
+(define (bit*-dist i*0 i*1)
+  (for/sum ((i0 (in-list i*0))
+            (i1 (in-list i*1))
+            #:when (< i0 i1))
+    1))
 
 (define (typed-racket-id->num-units str)
   (string-length str))
@@ -505,13 +559,23 @@
     (check-false (typed-racket-id? "a11"))
     (check-false (typed-racket-id? "0o0")))
 
-  (test-case "typed-racket-id<?"
-    (check-true (typed-racket-id<? "0" "1"))
-    (check-true (typed-racket-id<? "00" "11"))
-    (check-true (typed-racket-id<? "0000" "1111"))
-    (check-false (typed-racket-id<? "1111" "0000"))
-    (check-true (typed-racket-id<? "0110" "1110"))
-    (check-false (typed-racket-id<? "0110" "1011")))
+  (test-case "typed-racket-id<=?"
+    (check-true (typed-racket-id<=? "0" "0"))
+    (check-true (typed-racket-id<=? "0" "1"))
+    (check-true (typed-racket-id<=? "00" "11"))
+    (check-true (typed-racket-id<=? "0000" "1111"))
+    (check-false (typed-racket-id<=? "1111" "0000"))
+    (check-true (typed-racket-id<=? "0110" "1110"))
+    (check-false (typed-racket-id<=? "0110" "1011")))
+
+  (test-case "typed-racket-id-dist"
+    (check-equal? (typed-racket-id-dist "0" "0") 0)
+    (check-equal? (typed-racket-id-dist "0" "1") 1)
+    (check-equal? (typed-racket-id-dist "00" "11") 2)
+    (check-equal? (typed-racket-id-dist "0000" "1111") 4)
+    (check-equal? (typed-racket-id-dist "1111" "0000") -4)
+    (check-equal? (typed-racket-id-dist "0110" "1110") 1)
+    (check-equal? (typed-racket-id-dist "0110" "1011") #f))
 
   (test-case "typed-racket-id->num-units"
     (check-equal? (typed-racket-id->num-units "001")

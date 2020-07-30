@@ -27,7 +27,7 @@
     (-> performance-info? symbol?)]
 
    [performance-info->src
-    (-> performance-info? path-string?)]
+    (-> performance-info? (or/c #f path-string?))]
 
    [performance-info->num-units
     (-> performance-info? natural?)]
@@ -145,6 +145,9 @@
 
    [filter-performance-info
     (-> performance-info? (-> configuration-info? any/c) performance-info?)]
+
+   [performance-info%best-typed-path
+     (-> performance-info? natural? (-> configuration-info? configuration-info? (or/c #f exact-integer?)) performance-info?)]
 ))
 
 (require
@@ -384,6 +387,49 @@
                          #:typed-runtime* (performance-info-typed-runtime* pi)
                          #:make-in-configurations in-filtered-configurations))
 
+(define (performance-info%best-typed-path pi max-dist cfg-dist)
+  (define new-name
+    (let ((old-name (performance-info-name pi)))
+      (string->symbol (format "~a+~a type~a" old-name max-dist (if (= max-dist 1) "" "s")))))
+  (define num-configs (performance-info-num-configurations pi))
+  (define new-untyped-t* (box #f)) ;; gotta infer the untyped configuration, we don't know the order
+  (define num-<=? (box 0))
+  (define cfg*
+    (for/list ((orig-cfg (in-configurations pi)))
+      (define orig-id (configuration-info->id orig-cfg))
+      (define orig-num-types (configuration-info->num-types orig-cfg))
+      (define orig-t* (configuration-info->runtime* orig-cfg))
+      (define best-t*
+        (begin ;; look at all configurations, pick best time out of all in range
+          (set-box! num-<=? 0)
+          (for/fold ((acc-t* orig-t*)
+                     (acc-mean (mean orig-t*))
+                     #:result acc-t*)
+                    ((cfg (in-configurations pi)))
+            (define new-t*
+              (let ((dist (cfg-dist orig-cfg cfg)))
+                (and dist ;; #f means unrelated
+                     (<= 0 dist)
+                     (set-box! num-<=? (+ 1 (unbox num-<=?)))
+                     (<= dist max-dist)
+                     (configuration-info->runtime* cfg))))
+            (define new-mean
+              (and new-t* (mean new-t*)))
+            (if (and new-mean (< new-mean acc-mean))
+              (values new-t* new-mean)
+              (values acc-t* acc-mean)))))
+      (when (= (unbox num-<=?) num-configs)
+        (set-box! new-untyped-t* best-t*))
+      (configuration-info orig-id orig-num-types best-t*)))
+  (make-performance-info new-name
+                         #:src #false
+                         #:num-units (performance-info-num-units pi)
+                         #:num-configurations num-configs
+                         #:baseline-runtime* (performance-info-baseline-runtime* pi)
+                         #:untyped-runtime* (unbox new-untyped-t*)
+                         #:typed-runtime* (performance-info-typed-runtime* pi)
+                         #:make-in-configurations (lambda (_pi) cfg*)))
+
 ;; =============================================================================
 
 (module+ test
@@ -445,4 +491,37 @@
       (run-tests pi/list)
       (run-tests pi/fn)
       (void)))
+
+  (test-case "performance-info%best-typed-path"
+    (let* ([t* '(1 2.5 5 3.3 1.5 1.7 1.7 0.5)]
+           [nc (length t*)]
+           [make-list-seq
+             (λ (_pi) (for/list ([t (in-list t*)] [i (in-naturals)])
+                        (configuration-info i i (list t))))]
+           [cfg-pos-dist
+             (lambda (c0 c1)
+               (define id0 (configuration-info->id c0))
+               (define id1 (configuration-info->id c1))
+               (and (<= id0 id1)
+                    (integer-count-bits (- id1 id0))))]
+           [pi
+             ;; configurations in a list
+             (make-performance-info 'example
+               #:src "EXAMPLE"
+               #:num-units (log2 nc)
+               #:num-configurations nc
+               #:baseline-runtime* (list (first t*))
+               #:untyped-runtime* (list (first t*))
+               #:typed-runtime* (list (last t*))
+               #:make-in-configurations make-list-seq)]
+           [pi%1
+             (performance-info%best-typed-path pi 1 cfg-pos-dist)]
+           [pi%2
+             (performance-info%best-typed-path pi 2 cfg-pos-dist)])
+      (check-equal? ((deliverable 2) pi) 5)
+      (check-equal? ((deliverable 2) pi%1) 8)
+      (check-equal? ((deliverable 2) pi%2) 8)
+      (check-equal? ((deliverable 0.6) pi) 1)
+      (check-equal? ((deliverable 0.6) pi%1) 4)
+      (check-equal? ((deliverable 0.6) pi%2) 7)))
 )

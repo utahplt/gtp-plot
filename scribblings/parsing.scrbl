@@ -72,7 +72,7 @@
   Predicate for a Typed Racket configuration name.
   A name is a @racket[_k]-character string of @racket[#\0] and @racket[#\1] characters.
   Each digit represents one unit, which may or may not be typed.
-  A @racket[#\1] means @emph{typed} and a @racket[\#0] means @emph{untyped}.
+  A @racket[#\1] means @emph{typed} and a @racket[#\0] means @emph{untyped}.
 
   @examples[#:eval tr-info-eval
     (typed-racket-id? "0000")
@@ -82,15 +82,17 @@
   ]
 }
 
-@defproc[(typed-racket-id<? [id0 typed-racket-id?] [id1 typed-racket-id?]) boolean?]{
+@defproc[(typed-racket-id<=? [id0 typed-racket-id?] [id1 typed-racket-id?]) boolean?]{
   Returns true if the first id describes a subset of the types in the second id.
 
   @examples[#:eval tr-info-eval
-    (typed-racket-id<? "0000" "1111")
-    (typed-racket-id<? "1111" "0000")
-    (typed-racket-id<? "0110" "1110")
-    (typed-racket-id<? "0110" "1011")
+    (typed-racket-id<=? "0000" "1111")
+    (typed-racket-id<=? "1111" "0000")
+    (typed-racket-id<=? "0110" "1110")
+    (typed-racket-id<=? "0110" "1011")
   ]
+
+  @history[#:added "0.6"]
 }
 
 @defproc[(make-typed-racket-sample-info [src (listof typed-racket-info?)]
@@ -117,6 +119,14 @@
 
 @defproc[(untyped-configuration-info? [x any/c]) boolean?]{
   Predicate for an untyped Typed Racket configuration.
+}
+
+@defproc[(typed-racket-info%best-typed-path [pi typed-racket-info?] [n natural?]) typed-racket-info?]{
+  Return a structure with the same configurations as @racket[pi], but
+   each configuration has the best-possible runtimes that can be reached
+   after @racket[n] type conversion steps.
+
+  @history[#:added "0.6"]
 }
 
 
@@ -225,20 +235,35 @@
 
   To decode the type annotations from one number @racket[_N],
    convert @racket[_N] to base-2 and look for @racket[#\0] digits.
-  Each place in a binary number correponds to a typed unit, and each
-   @racket[#\0] means the unit is typed.
+  Each place in a binary number correponds to a typed unit,
+   each @racket[#\0] means the unit is typed,
+   and each @racket[#\1] means the unit in untyped.
+
+  Be advised, the interpretations of @racket[#\0] and @racket[#\1] are the
+   opposite of what @racket[typed-racket-id?] does.
 }
 
-@defproc[(reticulated-id<? [id0 reticulated-id?] [id1 reticulated-id?]) boolean?]{
+@defproc[(reticulated-id<=? [id0 reticulated-id?] [id1 reticulated-id?]) boolean?]{
   Returns true if the first configuration name describes a subset of the
    type annotations in the second name.
 
   @examples[#:eval retic-info-eval
-    (reticulated-id<? "1" "0")
-    (reticulated-id<? "0" "1")
-    (reticulated-id<? "7-6" "5-6")
-    (reticulated-id<? "6-6" "5-6")
+    (reticulated-id<=? "1" "0")
+    (reticulated-id<=? "0" "1")
+    (reticulated-id<=? "7-6" "5-6")
+    (reticulated-id<=? "6-6" "5-6")
   ]
 
   The input configurations must be for the same benchmark.
+
+  @history[#:added "0.6"]
 }
+
+@defproc[(reticulated-info%best-typed-path [pi reticulated-info?] [n natural?]) reticulated-info?]{
+  Return a structure with the same configurations as @racket[pi], but
+   each configuration has the best-possible runtimes that can be reached
+   after @racket[n] type conversion steps.
+
+  @history[#:added "0.6"]
+}
+

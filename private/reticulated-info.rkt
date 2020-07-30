@@ -10,10 +10,12 @@
     (-> any/c any)]
    [reticulated-id?
      (-> any/c any)]
-   [reticulated-id<?
+   [reticulated-id<=?
      (-> any/c any/c any)]
    [make-reticulated-info
-    (->* [reticulated-data?] [(or/c 'exhaustive 'approximate #f)] performance-info?)]))
+    (->* [reticulated-data?] [(or/c 'exhaustive 'approximate #f)] performance-info?)]
+   [reticulated-info%best-typed-path
+     (-> reticulated-info? natural? reticulated-info?)]))
 
 (require
   gtp-plot/configuration-info
@@ -154,6 +156,21 @@
           (set-box! line-number (+ 1 (unbox line-number)))
           (parse-configuration ln (unbox line-number))]))))
   (in-producer go #f))
+
+(define (reticulated-info%best-typed-path pi n)
+  (performance-info->reticulated-info
+    (performance-info%best-typed-path pi n reticulated-configuration-dist)))
+
+(define (performance-info->reticulated-info pi)
+  (reticulated-info
+    (performance-info->name pi)
+    (performance-info->src pi)
+    (performance-info->num-units pi)
+    (performance-info->num-configurations pi)
+    (performance-info->baseline-runtime* pi)
+    (performance-info->untyped-runtime* pi)
+    (performance-info->typed-runtime* pi)
+    (performance-info-make-in-configurations pi)))
 
 ;; -----------------------------------------------------------------------------
 
@@ -358,15 +375,37 @@
   (or/c reticulated-id-list?
         (and/c string? reticulated-id-string?)))
 
-(define (reticulated-id<? pre-id0 pre-id1)
-  (define id0 (normalize-reticulated-id pre-id0 'reticulated-id<?))
-  (define id1 (normalize-reticulated-id pre-id1 'reticulated-id<?))
+(define (reticulated-id<=? pre-id0 pre-id1)
+  (define id0 (normalize-reticulated-id pre-id0 'reticulated-id<=?))
+  (define id1 (normalize-reticulated-id pre-id1 'reticulated-id<=?))
   (unless (= (length id0) (length id1))
-    (raise-arguments-error 'reticulated-id<? "ids must be for the same benchmark" "id0" id0 "id1" id1))
+    (raise-arguments-error 'reticulated-id<=? "ids must be for the same benchmark" "id0" id0 "id1" id1))
+  (reticulated-id-list<=? id0 id1))
+
+(define (reticulated-configuration-dist c0 c1)
+  (reticulated-id-dist (configuration-info->id c0) (configuration-info->id c1)))
+
+(define (reticulated-id-dist pre-id0 pre-id1)
+  (define id0 (normalize-reticulated-id pre-id0 'reticulated-id<=?))
+  (define id1 (normalize-reticulated-id pre-id1 'reticulated-id<=?))
+  (cond
+    [(reticulated-id-list<=? id0 id1)
+     (reticulated-id-list-dist id0 id1)]
+    [(reticulated-id-list<=? id1 id0)
+     (- (reticulated-id-list-dist id1 id0))]
+    [else
+      #false]))
+
+(define (reticulated-id-list<=? id0 id1)
   (for/and ((n0 (in-list id0))
             (n1 (in-list id1)))
     #;(ditto = n1 (bitwise-and n0 n1))
     (= n0 (bitwise-ior n0 n1))))
+
+(define (reticulated-id-list-dist id0 id1)
+  (for/sum ((n0 (in-list id0))
+            (n1 (in-list id1)))
+    (integer-count-bits (- n0 n1))))
 
 ;; =============================================================================
 
@@ -595,10 +634,18 @@
     (check-false (reticulated-id? "0--5-0"))
     (check-false (reticulated-id? '(-5 3))))
 
-  (test-case "reticulated-id<?"
-    (check-false (reticulated-id<? "0000" "1111"))
-    (check-true (reticulated-id<? "1111" "0000"))
-    (check-true (reticulated-id<? "7-6" "5-6"))
-    (check-false (reticulated-id<? "6-6" "5-6")))
+  (test-case "reticulated-id<=?"
+    (check-true (reticulated-id<=? "0000" "0000"))
+    (check-false (reticulated-id<=? "0000" "1111"))
+    (check-true (reticulated-id<=? "1111" "0000"))
+    (check-true (reticulated-id<=? "7-6" "5-6"))
+    (check-false (reticulated-id<=? "6-6" "5-6")))
+
+  (test-case "reticulated-id-dist"
+    (check-equal? (reticulated-id-dist "9-9-9" "9-9-9") 0)
+    (check-equal? (reticulated-id-dist "1111" "0000") 6) ;; "1111" ~> 10001010111
+    (check-equal? (reticulated-id-dist "7-6" "5-6") 1)
+    (check-equal? (reticulated-id-dist "5-6" "7-6") -1)
+    (check-equal? (reticulated-id-dist "6-6" "5-6") #f))
 )
 

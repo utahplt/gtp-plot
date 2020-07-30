@@ -84,7 +84,7 @@
 }
 
 @defproc[(make-performance-info [name symbol?]
-                                [#:src src path-string?]
+                                [#:src src (or/c #f path-string?)]
                                 [#:num-units num-units natural?]
                                 [#:baseline-runtime* baseline-runtime* (listof nonnegative-real/c)]
                                 [#:untyped-runtime* untyped-runtime* (listof nonnegative-real/c)]
@@ -98,7 +98,8 @@
     @racket[name] is the name of the program;
   }
   @item{
-    @racket[src] is a performance data for the program,
+    @racket[src] is a performance data for the program
+     (or @racket[#f] for datasets that do not live in a file),
      this file can be in any format that @racket[make-in-configurations] understands;
   }
   @item{
@@ -124,7 +125,7 @@
 
 @deftogether[(
   @defproc[(performance-info->name [pi performance-info?]) symbol?]
-  @defproc[(performance-info->src [pi performance-info?]) path-string?]
+  @defproc[(performance-info->src [pi performance-info?]) (or/c #f path-string?)]
   @defproc[(performance-info->num-units [pi performance-info?]) natural?]
   @defproc[(performance-info->baseline-runtime* [pi performance-info?]) (listof nonnegative-real/c)]
   @defproc[(performance-info->untyped-runtime* [pi performance-info?]) (listof nonnegative-real/c)]
