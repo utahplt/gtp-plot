@@ -86,6 +86,7 @@
 @defproc[(make-performance-info [name symbol?]
                                 [#:src src (or/c #f path-string?)]
                                 [#:num-units num-units natural?]
+                                [#:num-configurations num-configurations natural?]
                                 [#:baseline-runtime* baseline-runtime* (listof nonnegative-real/c)]
                                 [#:untyped-runtime* untyped-runtime* (listof nonnegative-real/c)]
                                 [#:typed-runtime* typed-runtime* (listof nonnegative-real/c)]
@@ -104,6 +105,9 @@
   }
   @item{
     @racket[num-units] is the number of @tech{typeable components} in the program;
+  }
+  @item{
+    @racket[num-configurations] is the number of @tech{configurations} in the program;
   }
   @item{
     @racket[baseline-runtime*] is the performance of the given program without any gradual typing;
