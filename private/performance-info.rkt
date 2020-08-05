@@ -10,7 +10,7 @@
   (contract-out
    [make-performance-info
     (-> symbol?
-        #:src path-string?
+        #:src (or/c #f path-string?)
         #:num-units natural?
         #:num-configurations natural?
         #:baseline-runtime* (listof nonnegative-real/c)
