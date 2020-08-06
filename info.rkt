@@ -7,5 +7,5 @@
 (define pkg-authors '(ben))
 (define scribblings '(("scribblings/gtp-plot.scrbl" () (omit-start))))
 (define raco-commands '(("gtp-plot" (submod gtp-plot/private/raco main) "Plot a dataset" #f)))
-(define compile-omit-paths '("example"))
-(define test-omit-paths '("example"))
+(define compile-omit-paths '("example" "private/test/lnm-gtp-measure.rktd"))
+(define test-omit-paths '("example" "private/test/lnm-gtp-measure.rktd"))
