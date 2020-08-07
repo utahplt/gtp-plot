@@ -35,7 +35,6 @@
   gtp-plot/performance-info
   gtp-plot/sample-info
   gtp-util
-  lang-file/read-lang-file
   (only-in gtp-plot/util
     path->name)
   (only-in racket/math
@@ -86,7 +85,12 @@
                  (regexp-match? NON-SPACE-NON-RPAREN (current-input-port))))))))
 
 (define (gtp-measure-typed-untyped-lang-file? path)
-  (equal? (lang-file-lang path) "gtp-measure/output/typed-untyped"))
+  ;; 2020-08-06 : previously used lang-file package, but need gtp-measure installed
+  (with-input-from-file path
+    (lambda ()
+      (for/first ((line (in-lines))
+                  #:when (regexp-match? #rx"#lang" line))
+        (regexp-match? #rx"gtp-measure/output/typed-untyped" line)))))
 
 (define (make-typed-racket-info path #:name [name #f])
   (define vector-data? (vector? path))
