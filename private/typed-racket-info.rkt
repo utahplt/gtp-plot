@@ -58,7 +58,7 @@
 
 (define (typed-racket-data? v)
   (cond
-    [(path-string? v)
+    [(and (path-string? v) (file-exists? v))
      (looks-like-typed-racket-data v)]
     [(vector? v)
      (for/and ((elem (in-vector v)))
