@@ -502,10 +502,11 @@
   (log-gtp-plot-info "rendering validate-samples-plot for ~a and ~s" pi si)
   (define sample-size (sample-info->sample-size si))
   (define pi* (sample-info->performance-info* si))
+  (define legend? (*OVERHEAD-LEGEND?*))
   (define body (maybe-freeze
-    (parameterize ([plot-x-ticks (make-overhead-x-ticks)]
+    (parameterize ([plot-x-ticks (if legend? (make-overhead-x-ticks) no-ticks)]
                    [plot-x-transform log-transform]
-                   [plot-y-ticks (make-overhead-y-ticks)]
+                   [plot-y-ticks (if legend? (make-overhead-y-ticks) no-ticks)]
                    [plot-x-far-ticks no-ticks]
                    [plot-y-far-ticks no-ticks]
                    [plot-tick-size TICK-SIZE]
@@ -528,7 +529,9 @@
         #:width (*OVERHEAD-PLOT-WIDTH*)
         #:height (*OVERHEAD-PLOT-HEIGHT*)))))
   (begin0
-    (samples-add-legend (performance-info->name si) sample-size (length pi*) body)
+    (if legend?
+      (samples-add-legend (performance-info->name si) sample-size (length pi*) body)
+      body)
     (log-gtp-plot-info "rendering finished")))
 
 (define (relative-overhead-cdf pi-0 pi-1)
