@@ -118,6 +118,7 @@
 (defparam *LEGEND-HSPACE* 20 Pict-Units)
 (defparam *LEGEND-Y-SKIP* 10 Pict-Units)
 (defparam *OVERHEAD-LEGEND?* #true Boolean)
+(defparam *OVERHEAD-DECORATION?* #true Boolean)
 (defparam *LEGEND?* #true Boolean)
 (defparam *GRID-X* 600 Natural)
 (defparam *GRID-Y* 1300 Natural)
@@ -245,13 +246,14 @@
   (log-gtp-plot-info "rendering overhead-plot for ~a" pre-pi*)
   ;; TODO use standard-D
   (define legend? (*OVERHEAD-LEGEND?*))
+  (define deco? (*OVERHEAD-DECORATION?*))
   (define multi? (pair? pre-pi*))
   (define pi* (if multi? (flatten pre-pi*) (list pre-pi*)))
   (define color0 (*OVERHEAD-LINE-COLOR*))
   (define body (maybe-freeze
-    (parameterize ([plot-x-ticks (if legend? (make-overhead-x-ticks) no-ticks)]
+    (parameterize ([plot-x-ticks (if deco? (make-overhead-x-ticks) no-ticks)]
                    [plot-x-transform log-transform]
-                   [plot-y-ticks (if legend? (make-overhead-y-ticks) no-ticks)]
+                   [plot-y-ticks (if deco? (make-overhead-y-ticks) no-ticks)]
                    [plot-x-far-ticks no-ticks]
                    [plot-y-far-ticks no-ticks]
                    [plot-tick-size TICK-SIZE]
@@ -1247,6 +1249,8 @@
     gtp-plot/reticulated-info
     racket/runtime-path)
 
+  (define CI? (and (getenv "CI") #true))
+
   (define-runtime-path espionage-data "./test/espionage/")
   (define espionage (make-reticulated-info espionage-data))
 
@@ -1258,21 +1262,22 @@
                [_i (in-range n)])
       x))
 
-  (test-case "deliverable-counter"
-    (define (check-deliverable-counter/cache pi)
-      (define f0 (make-simple-deliverable-counter pi))
-      (define f1 (make-deliverable-counter pi))
-      (define seq (linear-seq 1 (*OVERHEAD-MAX*) (*OVERHEAD-SAMPLES*)))
-      (define-values [v*0 t0]
-        (force/cpu-time (λ () (map f0 seq))))
-      (define-values [v*1 t1]
-        (force/cpu-time (λ () (map f1 seq))))
-      (check-equal? v*0 v*1)
-      (check < t1 t0)
-      (void))
+  (unless CI?
+    (test-case "deliverable-counter"
+      (define (check-deliverable-counter/cache pi)
+        (define f0 (make-simple-deliverable-counter pi))
+        (define f1 (make-deliverable-counter pi))
+        (define seq (linear-seq 1 (*OVERHEAD-MAX*) (*OVERHEAD-SAMPLES*)))
+        (define-values [v*0 t0]
+          (force/cpu-time (λ () (map f0 seq))))
+        (define-values [v*1 t1]
+          (force/cpu-time (λ () (map f1 seq))))
+        (check-equal? v*0 v*1)
+        (check < t1 t0)
+        (void))
 
-    (check-deliverable-counter/cache espionage)
-  )
+      (check-deliverable-counter/cache espionage)
+    ))
 
   (test-case "overhead-plot"
     (check-true (pict? (overhead-plot espionage))))
