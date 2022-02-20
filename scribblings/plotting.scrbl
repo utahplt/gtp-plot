@@ -165,21 +165,6 @@ For command-line options, run @exec{raco gtp-plot --help}.
   @history[#:added "0.5"]
 }
 
-@defproc[(configuration-lattice [pi performance-info?]) pict?]{
-  Show the overhead of every configuration in a lattice.
-
-  @render-demo[
-    (parameterize ([*FONT-SIZE* 14]
-                   [*LATTICE-UNIT-WIDTH* 16]
-                   [*LATTICE-UNIT-HEIGHT* 12]
-                   [*LATTICE-CONFIG-Y-MARGIN* 24]
-                   [*LATTICE-LINES?* #true]
-                   [*LATTICE-LINE-ALPHA* 0.5])
-      (performance-lattice mbta))]
-
-  @history[#:added "0.5"]
-}
-
 
 @section{Experimental Plotting Functions}
 
